@@ -1,0 +1,17 @@
+name: Build and Push
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*.*.*"
+  workflow_dispatch:
+jobs:
+  build:
+    uses: louisheal/github-actions/.github/workflows/build-and-push.yml@main
+    with:
+      image-name: poker-tracker-api
+    permissions:
+      contents: write
+      packages: write
