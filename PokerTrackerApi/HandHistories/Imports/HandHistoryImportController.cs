@@ -4,8 +4,15 @@ namespace PokerTrackerApi.HandHistories.Imports;
 
 [ApiController]
 [Route("api/imports")]
-public sealed class HandHistoryImportController(HandHistoryImportService importService) : ControllerBase
+public class HandHistoryImportController : ControllerBase
 {
+    private readonly IHandHistoryImportService _importService;
+
+    public HandHistoryImportController(IHandHistoryImportService importService)
+    {
+        _importService = importService;
+    }
+
     [HttpPost]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<HandHistoryImportSummary>> Upload(
@@ -17,7 +24,7 @@ public sealed class HandHistoryImportController(HandHistoryImportService importS
             return BadRequest("At least one file is required.");
         }
 
-        var summary = await importService.ImportAsync(files, cancellationToken);
+        var summary = await _importService.ImportAsync(files, cancellationToken);
         return Ok(summary);
     }
 }

@@ -1,6 +1,6 @@
 namespace PokerTrackerApi.HandHistories;
 
-public sealed class RawHand
+public class RawHand
 {
     public required string HandId { get; init; }
 

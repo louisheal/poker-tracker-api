@@ -4,8 +4,15 @@ using PokerTrackerApi.HandHistories;
 
 namespace PokerTrackerApi.HandHistories.Imports;
 
-public sealed class HandHistoryImportService(HandHistoryRepository handHistoryRepository)
+public class HandHistoryImportService : IHandHistoryImportService
 {
+    private readonly IHandHistoryRepository _handHistoryRepository;
+
+    public HandHistoryImportService(IHandHistoryRepository handHistoryRepository)
+    {
+        _handHistoryRepository = handHistoryRepository;
+    }
+
     private static readonly Regex HandStartRegex = new("(?m)^Poker Hand #", RegexOptions.Compiled);
     private static readonly Regex HandIdRegex = new("\\APoker Hand #(?<id>RC[0-9]+):", RegexOptions.Compiled);
 
@@ -32,7 +39,7 @@ public sealed class HandHistoryImportService(HandHistoryRepository handHistoryRe
                 }
 
                 var handId = idMatch.Groups["id"].Value;
-                if (await handHistoryRepository.TryAddImportedHandAsync(handId, rawText, cancellationToken))
+                if (await _handHistoryRepository.TryAddImportedHandAsync(handId, rawText, cancellationToken))
                 {
                     savedHands++;
                 }

@@ -3,8 +3,13 @@ using PokerTrackerApi.HandHistories;
 
 namespace PokerTrackerApi.Persistence;
 
-public sealed class PokerTrackerDbContext(DbContextOptions<PokerTrackerDbContext> options) : DbContext(options)
+public class PokerTrackerDbContext : DbContext
 {
+    public PokerTrackerDbContext(DbContextOptions<PokerTrackerDbContext> options)
+        : base(options)
+    {
+    }
+
     public DbSet<RawHand> RawHands => Set<RawHand>();
 
     public DbSet<ParsedHand> ParsedHands => Set<ParsedHand>();

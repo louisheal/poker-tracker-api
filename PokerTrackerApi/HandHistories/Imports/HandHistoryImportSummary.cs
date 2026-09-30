@@ -1,6 +1,6 @@
 namespace PokerTrackerApi.HandHistories.Imports;
 
-public sealed record HandHistoryImportSummary(
+public record HandHistoryImportSummary(
     int FilesReceived,
     int HandsSaved,
     int DuplicateHands,

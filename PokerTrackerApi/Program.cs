@@ -7,8 +7,8 @@ using PokerTrackerApi.HandHistories.Imports;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddScoped<HandHistoryRepository>();
-builder.Services.AddScoped<HandHistoryImportService>();
+builder.Services.AddScoped<IHandHistoryRepository, HandHistoryRepository>();
+builder.Services.AddScoped<IHandHistoryImportService, HandHistoryImportService>();
 builder.Services.AddDbContext<PokerTrackerDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("PokerDb");
@@ -19,7 +19,8 @@ builder.Services.AddDbContext<PokerTrackerDbContext>(options =>
 
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 0)));
 });
-builder.Services.AddOpenApi(options => {
+builder.Services.AddOpenApi(options =>
+{
     options.AddDocumentTransformer((document, context, cancellationToken) =>
     {
         document.Servers = new List<OpenApiServer>
