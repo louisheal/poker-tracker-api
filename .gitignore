@@ -1,0 +1,22 @@
+# .NET build output
+**/bin/
+**/obj/
+**/out/
+TestResults/
+
+# IDE files
+.vs/
+.idea/
+*.user
+*.suo
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+**/appsettings.Local.json
+**/secrets.json
+
+# Logs and temporary files
+*.log
+*.tmp
