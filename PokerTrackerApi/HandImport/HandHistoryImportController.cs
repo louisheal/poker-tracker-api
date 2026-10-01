@@ -1,21 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace PokerTrackerApi.HandHistories.Imports;
+namespace PokerTrackerApi.HandImport;
 
 [ApiController]
 [Route("api/imports")]
 public class HandHistoryImportController : ControllerBase
 {
-    private readonly IHandHistoryImportService _importService;
+    private readonly IHandImportervice _importService;
 
-    public HandHistoryImportController(IHandHistoryImportService importService)
+    public HandHistoryImportController(IHandImportervice importService)
     {
         _importService = importService;
     }
 
     [HttpPost]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<HandHistoryImportSummary>> Upload(
+    public async Task<ActionResult<HandImportSummary>> Upload(
         [FromForm] List<IFormFile> files,
         CancellationToken cancellationToken)
     {

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PokerTrackerApi.Persistence;
 
@@ -10,9 +11,11 @@ using PokerTrackerApi.Persistence;
 namespace PokerTrackerApi.Persistence.Migrations
 {
     [DbContext(typeof(PokerTrackerDbContext))]
-    partial class PokerTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260930233121_AddPreflopSpots")]
+    partial class AddPreflopSpots
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -32,7 +35,7 @@ namespace PokerTrackerApi.Persistence.Migrations
                     b.ToTable("ParsedHands");
                 });
 
-            modelBuilder.Entity("PokerTrackerApi.PreflopSpots.PreflopSpot", b =>
+            modelBuilder.Entity("PokerTrackerApi.HandHistories.PreflopSpots.PreflopSpot", b =>
                 {
                     b.Property<string>("HandId")
                         .HasMaxLength(32)
@@ -83,7 +86,7 @@ namespace PokerTrackerApi.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("PokerTrackerApi.PreflopSpots.PreflopSpot", b =>
+            modelBuilder.Entity("PokerTrackerApi.HandHistories.PreflopSpots.PreflopSpot", b =>
                 {
                     b.HasOne("PokerTrackerApi.HandHistories.RawHand", null)
                         .WithMany()
