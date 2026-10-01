@@ -6,15 +6,16 @@ namespace PokerTrackerApi.HandReprocessing;
 [Route("api/handreprocessing")]
 public class HandReprocessingController : ControllerBase
 {
+    private readonly IHandReprocessingService _reprocessingService;
 
-    public HandReprocessingController()
+    public HandReprocessingController(IHandReprocessingService reprocessingService)
     {
-
+        _reprocessingService = reprocessingService;
     }
 
     [HttpPost]
-    public async Task ReprocessRawHands()
+    public async Task ReprocessRawHands(CancellationToken cancellationToken)
     {
-
+        await _reprocessingService.ReprocessRawHands(cancellationToken);
     }
 }
