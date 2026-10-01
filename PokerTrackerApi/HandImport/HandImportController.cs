@@ -4,11 +4,11 @@ namespace PokerTrackerApi.HandImport;
 
 [ApiController]
 [Route("api/imports")]
-public class HandHistoryImportController : ControllerBase
+public class HandImportController : ControllerBase
 {
-    private readonly IHandImportervice _importService;
+    private readonly IHandImportService _importService;
 
-    public HandHistoryImportController(IHandImportervice importService)
+    public HandImportController(IHandImportService importService)
     {
         _importService = importService;
     }

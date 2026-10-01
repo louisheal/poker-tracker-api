@@ -5,7 +5,7 @@ using PokerTrackerApi.PreflopSpots;
 
 namespace PokerTrackerApi.HandImport;
 
-public interface IHandHistoryImportRepository
+public interface IHandImportRepository
 {
     Task<bool> TryAddImportedHandAsync(
         string handId,
@@ -14,11 +14,11 @@ public interface IHandHistoryImportRepository
         CancellationToken cancellationToken);
 }
 
-public class HandHistoryImportRepository : IHandHistoryImportRepository
+public class HandImportRepository : IHandImportRepository
 {
     private readonly PokerTrackerDbContext _dbContext;
 
-    public HandHistoryImportRepository(PokerTrackerDbContext dbContext)
+    public HandImportRepository(PokerTrackerDbContext dbContext)
     {
         _dbContext = dbContext;
     }

@@ -3,22 +3,22 @@ using PokerTrackerApi.HandImport.Readers;
 
 namespace PokerTrackerApi.HandImport;
 
-public interface IHandImportervice
+public interface IHandImportService
 {
     Task<HandImportSummary> ImportAsync(
         IReadOnlyCollection<IFormFile> files,
         CancellationToken cancellationToken);
 }
 
-public class HandImportervice : IHandImportervice
+public class HandImportervice : IHandImportService
 {
-    private readonly IHandHistoryImportRepository _repository;
+    private readonly IHandImportRepository _repository;
     private readonly IPokerHandParser _parser;
     private readonly IPokerHandReader _reader;
     private readonly ILogger<HandImportervice> _logger;
 
     public HandImportervice(
-        IHandHistoryImportRepository handHistoryRepository,
+        IHandImportRepository handHistoryRepository,
         IPokerHandParser parser,
         IPokerHandReader reader,
         ILogger<HandImportervice> logger)

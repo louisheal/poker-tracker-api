@@ -11,9 +11,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<IHandHistoryRepository, HandHistoryRepository>();
-builder.Services.AddScoped<IHandHistoryImportRepository, HandHistoryImportRepository>();
+builder.Services.AddScoped<IHandImportRepository, HandImportRepository>();
 builder.Services.AddScoped<IPreflopSpotRepository, PreflopSpotRepository>();
-builder.Services.AddScoped<IHandImportervice, HandImportervice>();
+builder.Services.AddScoped<IHandImportService, HandImportervice>();
 builder.Services.AddScoped<IPokerHandReader, GgPokerHandReader>();
 builder.Services.AddScoped<IPokerHandParser, GgPokerHandParser>();
 builder.Services.AddDbContext<PokerTrackerDbContext>(options =>
