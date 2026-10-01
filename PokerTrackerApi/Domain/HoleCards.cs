@@ -12,7 +12,7 @@ public record HoleCards
         var secondRank = Second.Rank;
         if (firstRank == secondRank)
         {
-            return $"{firstRank}{secondRank}";
+            return $"{firstRank.ToCode()}{secondRank.ToCode()}";
         }
 
         var firstIsHigher = firstRank > secondRank;
