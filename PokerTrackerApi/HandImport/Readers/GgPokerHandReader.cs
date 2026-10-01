@@ -1,36 +1,57 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace PokerTrackerApi.HandImport.Readers;
 
 public class GgPokerHandReader : IPokerHandReader
 {
-    private static readonly Regex HandStartRegex = new("(?m)^Poker Hand #", RegexOptions.Compiled);
     private static readonly Regex HandIdRegex = new("\\APoker Hand #(?<id>RC[0-9]+):", RegexOptions.Compiled);
 
     public async IAsyncEnumerable<HandReadResult> ReadHandsAsync(
         TextReader reader,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var contents = await reader.ReadToEndAsync(cancellationToken);
+        StringBuilder? currentHand = null;
 
-        var headers = HandStartRegex.Matches(contents);
-        for (var index = 0; index < headers.Count; index++)
+        while (await reader.ReadLineAsync(cancellationToken) is { } line)
         {
-            var start = headers[index].Index;
-            var end = index + 1 < headers.Count ? headers[index + 1].Index : contents.Length;
-            var rawText = contents[start..end].TrimEnd('\r', '\n');
-            if (rawText.Length > 0)
+            if (line.StartsWith("Poker Hand #", StringComparison.Ordinal))
             {
-                if (!TryParseHandId(rawText, out var handId))
+                if (currentHand is not null)
                 {
-                    yield return new HandReadFailure(rawText, "Failed to parse hand id");
-                    continue;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    yield return CreateResult(currentHand.ToString());
                 }
-                yield return new HandReadSuccess(handId, rawText);
+
+                currentHand = new StringBuilder();
+            }
+
+            if (currentHand is not null)
+            {
+                if (currentHand.Length > 0)
+                {
+                    currentHand.AppendLine();
+                }
+                currentHand.Append(line);
             }
         }
+
+        if (currentHand is not null)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return CreateResult(currentHand.ToString());
+        }
+    }
+
+    private static HandReadResult CreateResult(string rawText)
+    {
+        if (!TryParseHandId(rawText, out var handId))
+        {
+            return new HandReadFailure(rawText, "Failed to parse hand id");
+        }
+        return new HandReadSuccess(handId, rawText);
     }
 
     private static bool TryParseHandId(string rawText, [NotNullWhen(true)] out string? handId)
