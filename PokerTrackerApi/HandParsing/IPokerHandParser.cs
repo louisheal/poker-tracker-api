@@ -1,4 +1,4 @@
-namespace PokerTrackerApi.HandImport.Parsers;
+namespace PokerTrackerApi.HandParsing;
 
 public interface IPokerHandParser
 {

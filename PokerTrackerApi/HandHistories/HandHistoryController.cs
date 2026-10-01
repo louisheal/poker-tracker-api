@@ -6,10 +6,10 @@ namespace PokerTrackerApi.HandHistories;
 [Route("api/handhistories")]
 public class HandHistoryController : ControllerBase
 {
-    private readonly IHandHistoryRepository _repository;
+    private readonly IParsedHandRepository _repository;
     private readonly IHandHistoryMapper _mapper;
 
-    public HandHistoryController(IHandHistoryRepository repository, IHandHistoryMapper mapper)
+    public HandHistoryController(IParsedHandRepository repository, IHandHistoryMapper mapper)
     {
         _repository = repository;
         _mapper = mapper;

@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using PokerTrackerApi.Domain;
 
-namespace PokerTrackerApi.HandImport.Parsers;
+namespace PokerTrackerApi.HandParsing;
 
 public partial class GgPokerHandParser : IPokerHandParser
 {
@@ -36,7 +36,7 @@ public partial class GgPokerHandParser : IPokerHandParser
 
     private static bool TryParseHand(
         string rawText,
-        [NotNullWhen(true)] out ParsedHand? hand,
+        [NotNullWhen(true)] out HandParseData? hand,
         [NotNullWhen(false)] out string? error)
     {
         hand = null;
@@ -95,7 +95,7 @@ public partial class GgPokerHandParser : IPokerHandParser
 
         var handKey = holeCards.HandKey();
         var actions = new List<ObservedAction>();
-        var observations = new List<PreflopSpot>();
+        var observations = new List<PreflopSpotObservation>();
 
         foreach (var line in rawText[actionStart..actionEnd].Split('\n'))
         {
@@ -124,13 +124,13 @@ public partial class GgPokerHandParser : IPokerHandParser
                     break;
                 }
 
-                observations.Add(new PreflopSpot(spotKey, handKey, action));
+                observations.Add(new PreflopSpotObservation(spotKey, handKey, action));
             }
 
             actions.Add(new ObservedAction(position, action, isAllIn));
         }
 
-        hand = new ParsedHand(holeCards, observations);
+        hand = new HandParseData(holeCards, observations);
         return true;
     }
 
@@ -217,24 +217,4 @@ public partial class GgPokerHandParser : IPokerHandParser
     }
 
     private record ObservedAction(string Position, PokerAction Action, bool IsAllIn);
-
-    // private record HoleCards(string First, string Second)
-    // {
-    //     public string HandKey()
-    //     {
-    //         var firstRank = First[0];
-    //         var secondRank = Second[0];
-    //         if (firstRank == secondRank)
-    //         {
-    //             return $"{firstRank}{secondRank}";
-    //         }
-
-    //         var ranks = "23456789TJQKA";
-    //         var firstIsHigher = ranks.IndexOf(firstRank) > ranks.IndexOf(secondRank);
-    //         var highCard = firstIsHigher ? First : Second;
-    //         var lowCard = firstIsHigher ? Second : First;
-    //         var suitedness = highCard[1] == lowCard[1] ? "s" : "o";
-    //         return $"{highCard[0]}{lowCard[0]}{suitedness}";
-    //     }
-    // }
 }

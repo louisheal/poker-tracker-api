@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace PokerTrackerApi.HandImport.Readers;
+namespace PokerTrackerApi.HandImport.HandReaders;
 
 public class GgPokerHandReader : IPokerHandReader
 {

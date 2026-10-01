@@ -4,20 +4,21 @@ using PokerTrackerApi.Persistence;
 using PokerTrackerApi.HandHistories;
 using PokerTrackerApi.PreflopSpots;
 using PokerTrackerApi.HandImport;
-using PokerTrackerApi.HandImport.Parsers;
-using PokerTrackerApi.HandImport.Readers;
+using PokerTrackerApi.HandImport.HandReaders;
+using PokerTrackerApi.HandParsing;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddScoped<IHandHistoryRepository, HandHistoryRepository>();
+builder.Services.AddScoped<IParsedHandRepository, ParsedHandRepository>();
 builder.Services.AddScoped<IHandHistoryMapper, HandHistoryMapper>();
 builder.Services.AddScoped<IPreflopSpotRepository, PreflopSpotRepository>();
-builder.Services.AddScoped<IHandImportRepository, HandImportRepository>();
+builder.Services.AddScoped<IRawHandRepository, RawHandRepository>();
 builder.Services.AddScoped<IHandImportService, HandImportService>();
 builder.Services.AddScoped<IPokerHandReader, GgPokerHandReader>();
 builder.Services.AddScoped<IPokerHandParser, GgPokerHandParser>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddDbContext<PokerTrackerDbContext>(options =>
 {

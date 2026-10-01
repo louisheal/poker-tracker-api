@@ -1,4 +1,4 @@
-namespace PokerTrackerApi.HandImport.Readers;
+namespace PokerTrackerApi.HandImport.HandReaders;
 
 public abstract record HandReadResult();
 public record HandReadSuccess(string HandId, string RawText) : HandReadResult;

@@ -1,8 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.Domain;
+using PokerTrackerApi.HandParsing;
 using PokerTrackerApi.Persistence;
 
 namespace PokerTrackerApi.PreflopSpots;
+
+public interface IPreflopSpotRepository
+{
+    void AddPreflopSpots(string handId, IReadOnlyList<PreflopSpotObservation> observations);
+    Task<RangeActionsDto> GetRangeAsync(string spotKey, CancellationToken cancellationToken);
+}
 
 public class PreflopSpotRepository : IPreflopSpotRepository
 {
@@ -11,6 +18,17 @@ public class PreflopSpotRepository : IPreflopSpotRepository
     public PreflopSpotRepository(PokerTrackerDbContext dbContext)
     {
         _dbContext = dbContext;
+    }
+
+    public void AddPreflopSpots(string handId, IReadOnlyList<PreflopSpotObservation> observations)
+    {
+        _dbContext.PreflopSpots.AddRange(observations.Select(observation => new PreflopSpot
+        {
+            HandId = handId,
+            SpotKey = observation.SpotKey,
+            HandKey = observation.HandKey,
+            Action = observation.Action,
+        }));
     }
 
     public async Task<RangeActionsDto> GetRangeAsync(string spotKey, CancellationToken cancellationToken)
