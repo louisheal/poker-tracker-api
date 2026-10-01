@@ -6,6 +6,7 @@ using PokerTrackerApi.PreflopSpots;
 using PokerTrackerApi.HandImport;
 using PokerTrackerApi.HandImport.Parsers;
 using PokerTrackerApi.HandImport.Readers;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +14,7 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<IHandHistoryRepository, HandHistoryRepository>();
 builder.Services.AddScoped<IHandImportRepository, HandImportRepository>();
 builder.Services.AddScoped<IPreflopSpotRepository, PreflopSpotRepository>();
-builder.Services.AddScoped<IHandImportService, HandImportervice>();
+builder.Services.AddScoped<IHandImportService, HandImportService>();
 builder.Services.AddScoped<IPokerHandReader, GgPokerHandReader>();
 builder.Services.AddScoped<IPokerHandParser, GgPokerHandParser>();
 builder.Services.AddDbContext<PokerTrackerDbContext>(options =>
@@ -26,6 +27,7 @@ builder.Services.AddDbContext<PokerTrackerDbContext>(options =>
 
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 0)));
 });
+
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((document, context, cancellationToken) =>
@@ -50,6 +52,11 @@ builder.Services.AddCors(options =>
             .AllowCredentials();
     });
 });
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter()));
 
 var app = builder.Build();
 

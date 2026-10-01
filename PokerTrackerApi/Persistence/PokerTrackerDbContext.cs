@@ -34,6 +34,11 @@ public class PokerTrackerDbContext : DbContext
                 .WithOne()
                 .HasForeignKey<ParsedHand>(hand => hand.HandId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.ComplexProperty(hand => hand.HoleCards, holeCards =>
+            {
+                holeCards.ComplexProperty(cards => cards.First);
+                holeCards.ComplexProperty(cards => cards.Second);
+            });
         });
 
         modelBuilder.Entity<PreflopSpot>(entity =>

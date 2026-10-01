@@ -10,18 +10,18 @@ public interface IHandImportService
         CancellationToken cancellationToken);
 }
 
-public class HandImportervice : IHandImportService
+public class HandImportService : IHandImportService
 {
     private readonly IHandImportRepository _repository;
     private readonly IPokerHandParser _parser;
     private readonly IPokerHandReader _reader;
-    private readonly ILogger<HandImportervice> _logger;
+    private readonly ILogger<HandImportService> _logger;
 
-    public HandImportervice(
+    public HandImportService(
         IHandImportRepository handHistoryRepository,
         IPokerHandParser parser,
         IPokerHandReader reader,
-        ILogger<HandImportervice> logger)
+        ILogger<HandImportService> logger)
     {
         _repository = handHistoryRepository;
         _parser = parser;
@@ -66,6 +66,7 @@ public class HandImportervice : IHandImportService
                 if (await _repository.TryAddImportedHandAsync(
                     hand.HandId,
                     hand.RawText,
+                    parseResult.Hand.HoleCards,
                     parseResult.Hand!.PreflopSpots,
                     cancellationToken))
                 {

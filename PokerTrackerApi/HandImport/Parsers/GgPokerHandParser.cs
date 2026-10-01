@@ -130,7 +130,7 @@ public partial class GgPokerHandParser : IPokerHandParser
             actions.Add(new ObservedAction(position, action, isAllIn));
         }
 
-        hand = new ParsedHand(observations);
+        hand = new ParsedHand(holeCards, observations);
         return true;
     }
 
@@ -144,7 +144,7 @@ public partial class GgPokerHandParser : IPokerHandParser
         }
 
         var match = matches[0];
-        holeCards = new HoleCards(match.Groups["first"].Value, match.Groups["second"].Value);
+        holeCards = HoleCards.FromCodes(match.Groups["first"].Value, match.Groups["second"].Value);
         return true;
     }
 
@@ -218,23 +218,23 @@ public partial class GgPokerHandParser : IPokerHandParser
 
     private record ObservedAction(string Position, PokerAction Action, bool IsAllIn);
 
-    private record HoleCards(string First, string Second)
-    {
-        public string HandKey()
-        {
-            var firstRank = First[0];
-            var secondRank = Second[0];
-            if (firstRank == secondRank)
-            {
-                return $"{firstRank}{secondRank}";
-            }
+    // private record HoleCards(string First, string Second)
+    // {
+    //     public string HandKey()
+    //     {
+    //         var firstRank = First[0];
+    //         var secondRank = Second[0];
+    //         if (firstRank == secondRank)
+    //         {
+    //             return $"{firstRank}{secondRank}";
+    //         }
 
-            var ranks = "23456789TJQKA";
-            var firstIsHigher = ranks.IndexOf(firstRank) > ranks.IndexOf(secondRank);
-            var highCard = firstIsHigher ? First : Second;
-            var lowCard = firstIsHigher ? Second : First;
-            var suitedness = highCard[1] == lowCard[1] ? "s" : "o";
-            return $"{highCard[0]}{lowCard[0]}{suitedness}";
-        }
-    }
+    //         var ranks = "23456789TJQKA";
+    //         var firstIsHigher = ranks.IndexOf(firstRank) > ranks.IndexOf(secondRank);
+    //         var highCard = firstIsHigher ? First : Second;
+    //         var lowCard = firstIsHigher ? Second : First;
+    //         var suitedness = highCard[1] == lowCard[1] ? "s" : "o";
+    //         return $"{highCard[0]}{lowCard[0]}{suitedness}";
+    //     }
+    // }
 }

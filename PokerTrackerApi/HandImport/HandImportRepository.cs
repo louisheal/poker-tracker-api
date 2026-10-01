@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PokerTrackerApi.Domain;
 using PokerTrackerApi.HandHistories;
 using PokerTrackerApi.Persistence;
 using PokerTrackerApi.PreflopSpots;
@@ -10,6 +11,7 @@ public interface IHandImportRepository
     Task<bool> TryAddImportedHandAsync(
         string handId,
         string rawText,
+        HoleCards HoleCards,
         IReadOnlyList<Parsers.PreflopSpot> observations,
         CancellationToken cancellationToken);
 }
@@ -26,6 +28,7 @@ public class HandImportRepository : IHandImportRepository
     public async Task<bool> TryAddImportedHandAsync(
         string handId,
         string rawText,
+        HoleCards HoleCards,
         IReadOnlyList<Parsers.PreflopSpot> observations,
         CancellationToken cancellationToken)
     {
@@ -35,7 +38,7 @@ public class HandImportRepository : IHandImportRepository
         }
 
         _dbContext.RawHands.Add(new RawHand { HandId = handId, RawText = rawText });
-        _dbContext.ParsedHands.Add(new ParsedHand { HandId = handId });
+        _dbContext.ParsedHands.Add(new ParsedHand { HandId = handId, HoleCards = HoleCards });
         _dbContext.PreflopSpots.AddRange(observations.Select(observation => new PreflopSpot
         {
             HandId = handId,
