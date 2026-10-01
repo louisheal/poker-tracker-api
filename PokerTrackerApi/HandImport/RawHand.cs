@@ -1,4 +1,4 @@
-namespace PokerTrackerApi.HandHistories;
+namespace PokerTrackerApi.HandImport;
 
 public class RawHand
 {
