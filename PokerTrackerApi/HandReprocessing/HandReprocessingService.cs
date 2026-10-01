@@ -49,11 +49,12 @@ public class HandReprocessingService : IHandReprocessingService
                     continue;
                 }
 
-                _parsedHandRepository.AddParsedHand(rawHand.HandId, parseResult.Hand.HoleCards);
-                _preflopSpotRepository.AddPreflopSpots(rawHand.HandId, parseResult.Hand.PreflopSpots);
+                await _parsedHandRepository.UpsertParsedHand(rawHand.HandId, parseResult.Hand.HoleCards, cancellationToken);
+                await _preflopSpotRepository.ReplacePreflopSpots(rawHand.HandId, parseResult.Hand.PreflopSpots, cancellationToken);
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _unitOfWork.ClearTracking();
         }
     }
 }

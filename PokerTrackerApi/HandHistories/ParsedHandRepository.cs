@@ -7,6 +7,7 @@ namespace PokerTrackerApi.HandHistories;
 public interface IParsedHandRepository
 {
     void AddParsedHand(string handId, HoleCards holeCards);
+    Task UpsertParsedHand(string handId, HoleCards holeCards, CancellationToken cancellationToken);
     Task<ParsedHand[]> GetParsedHands(CancellationToken cancellationToken);
 }
 
@@ -23,6 +24,19 @@ public class ParsedHandRepository : IParsedHandRepository
     public void AddParsedHand(string handId, HoleCards holeCards)
     {
         _dbContext.ParsedHands.Add(new ParsedHand { HandId = handId, HoleCards = holeCards });
+    }
+
+    public async Task UpsertParsedHand(string handId, HoleCards holeCards, CancellationToken cancellationToken)
+    {
+        var parsedHand = await _dbContext.ParsedHands.SingleOrDefaultAsync(hand => hand.HandId == handId, cancellationToken);
+
+        if (parsedHand is null)
+        {
+            AddParsedHand(handId, holeCards);
+            return;
+        }
+
+        parsedHand.HoleCards = holeCards;
     }
 
     public Task<ParsedHand[]> GetParsedHands(CancellationToken cancellationToken) =>

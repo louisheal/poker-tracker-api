@@ -3,6 +3,7 @@ namespace PokerTrackerApi.Persistence;
 public interface IUnitOfWork
 {
     Task SaveChangesAsync(CancellationToken cancellationToken);
+    void ClearTracking();
 }
 
 public class UnitOfWork : IUnitOfWork
@@ -15,4 +16,6 @@ public class UnitOfWork : IUnitOfWork
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) => _dbContext.SaveChangesAsync(cancellationToken);
+
+    public void ClearTracking() => _dbContext.ChangeTracker.Clear();
 }
