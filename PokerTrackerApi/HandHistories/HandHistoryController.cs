@@ -7,16 +7,22 @@ namespace PokerTrackerApi.HandHistories;
 public class HandHistoryController : ControllerBase
 {
     private readonly IHandHistoryRepository _repository;
+    private readonly IHandHistoryMapper _mapper;
 
-    public HandHistoryController(IHandHistoryRepository repository)
+    public HandHistoryController(IHandHistoryRepository repository, IHandHistoryMapper mapper)
     {
         _repository = repository;
+        _mapper = mapper;
     }
 
     [HttpGet]
     public async Task<HandHistoryDto[]> GetHandHistories(CancellationToken cancellationToken)
     {
         var parsedHands = await _repository.GetParsedHands(cancellationToken);
-        return parsedHands.Select(hand => new HandHistoryDto(hand.HandId)).ToArray();
+        return parsedHands.Select(hand =>
+        {
+            var holeCardsDto = _mapper.Map(hand.HoleCards);
+            return new HandHistoryDto(hand.HandId, holeCardsDto);
+        }).ToArray();
     }
 }
