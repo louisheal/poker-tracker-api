@@ -15,7 +15,7 @@ public class HandReprocessingService : IHandReprocessingService
 {
     private readonly IPokerHandParser _parser;
     private readonly IRawHandRepository _rawHandRepository;
-    private readonly IParsedHandRepository _parsedHandRepository;
+    private readonly IHandHistorySummaryRepository _handHistorySummaryRepository;
     private readonly IPreflopSpotRepository _preflopSpotRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<IHandReprocessingService> _logger;
@@ -23,7 +23,7 @@ public class HandReprocessingService : IHandReprocessingService
     public HandReprocessingService(
         IPokerHandParser parser,
         IRawHandRepository rawHandRepository,
-        IParsedHandRepository parsedHandRepository,
+        IHandHistorySummaryRepository handHistorySummaryRepository,
         IPreflopSpotRepository preflopSpotRepository,
         IUnitOfWork unitOfWork,
         ILogger<IHandReprocessingService> logger
@@ -31,7 +31,7 @@ public class HandReprocessingService : IHandReprocessingService
     {
         _parser = parser;
         _rawHandRepository = rawHandRepository;
-        _parsedHandRepository = parsedHandRepository;
+        _handHistorySummaryRepository = handHistorySummaryRepository;
         _preflopSpotRepository = preflopSpotRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -54,7 +54,7 @@ public class HandReprocessingService : IHandReprocessingService
                     continue;
                 }
 
-                await _parsedHandRepository.UpsertParsedHand(
+                await _handHistorySummaryRepository.UpsertHandHistorySummary(
                     rawHand.HandId,
                     parseResult.Hand.HoleCards,
                     cancellationToken

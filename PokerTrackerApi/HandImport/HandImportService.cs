@@ -19,7 +19,7 @@ public class HandImportService : IHandImportService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRawHandRepository _repository;
     private readonly IPreflopSpotRepository _preflopRepository;
-    private readonly IParsedHandRepository _parsedHandRepository;
+    private readonly IHandHistorySummaryRepository _handHistorySummaryRepository;
     private readonly IPokerHandParser _parser;
     private readonly IPokerHandReader _reader;
     private readonly ILogger<HandImportService> _logger;
@@ -28,7 +28,7 @@ public class HandImportService : IHandImportService
         IUnitOfWork unitOfWork,
         IRawHandRepository handHistoryRepository,
         IPreflopSpotRepository preflopRepository,
-        IParsedHandRepository parsedHandRepository,
+        IHandHistorySummaryRepository handHistorySummaryRepository,
         IPokerHandParser parser,
         IPokerHandReader reader,
         ILogger<HandImportService> logger
@@ -37,7 +37,7 @@ public class HandImportService : IHandImportService
         _unitOfWork = unitOfWork;
         _repository = handHistoryRepository;
         _preflopRepository = preflopRepository;
-        _parsedHandRepository = parsedHandRepository;
+        _handHistorySummaryRepository = handHistorySummaryRepository;
         _parser = parser;
         _logger = logger;
         _reader = reader;
@@ -100,7 +100,10 @@ public class HandImportService : IHandImportService
                 }
 
                 _preflopRepository.AddPreflopSpots(hand.HandId, parseResult.Hand.PreflopSpots);
-                _parsedHandRepository.AddParsedHand(hand.HandId, parseResult.Hand.HoleCards);
+                _handHistorySummaryRepository.AddHandHistorySummary(
+                    hand.HandId,
+                    parseResult.Hand.HoleCards
+                );
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 savedHands++;

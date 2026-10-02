@@ -12,7 +12,7 @@ public class PokerTrackerDbContext : DbContext
 
     public DbSet<RawHand> RawHands => Set<RawHand>();
 
-    public DbSet<ParsedHand> ParsedHands => Set<ParsedHand>();
+    public DbSet<HandHistorySummary> HandHistorySummaries => Set<HandHistorySummary>();
 
     public DbSet<PreflopSpot> PreflopSpots => Set<PreflopSpot>();
 
@@ -25,14 +25,14 @@ public class PokerTrackerDbContext : DbContext
             entity.Property(hand => hand.RawText).HasColumnType("longtext").IsRequired();
         });
 
-        modelBuilder.Entity<ParsedHand>(entity =>
+        modelBuilder.Entity<HandHistorySummary>(entity =>
         {
             entity.HasKey(hand => hand.HandId);
             entity.Property(hand => hand.HandId).HasMaxLength(32);
             entity
                 .HasOne<RawHand>()
                 .WithOne()
-                .HasForeignKey<ParsedHand>(hand => hand.HandId)
+            .HasForeignKey<HandHistorySummary>(hand => hand.HandId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.ComplexProperty(
                 hand => hand.HoleCards,

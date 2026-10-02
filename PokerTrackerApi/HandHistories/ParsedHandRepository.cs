@@ -4,27 +4,27 @@ using PokerTrackerApi.Persistence;
 
 namespace PokerTrackerApi.HandHistories;
 
-public interface IParsedHandRepository
+public interface IHandHistorySummaryRepository
 {
-    void AddParsedHand(string handId, HoleCards holeCards);
-    Task UpsertParsedHand(string handId, HoleCards holeCards, CancellationToken cancellationToken);
-    Task<ParsedHand[]> GetParsedHands(CancellationToken cancellationToken);
+    void AddHandHistorySummary(string handId, HoleCards holeCards);
+    Task UpsertHandHistorySummary(string handId, HoleCards holeCards, CancellationToken cancellationToken);
+    Task<HandHistorySummary[]> GetHandHistorySummaries(CancellationToken cancellationToken);
 }
 
-public class ParsedHandRepository : IParsedHandRepository
+public class HandHistorySummaryRepository : IHandHistorySummaryRepository
 {
-    private const int MaxParsedHands = 100;
+    private const int MaxHandHistorySummaries = 100;
     private readonly PokerTrackerDbContext _dbContext;
 
-    public ParsedHandRepository(PokerTrackerDbContext dbContext)
+    public HandHistorySummaryRepository(PokerTrackerDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
-    public void AddParsedHand(string handId, HoleCards holeCards)
+    public void AddHandHistorySummary(string handId, HoleCards holeCards)
     {
-        _dbContext.ParsedHands.Add(
-            new ParsedHand
+        _dbContext.HandHistorySummaries.Add(
+            new HandHistorySummary
             {
                 HandId = handId,
                 HoleCards = holeCards,
@@ -33,30 +33,30 @@ public class ParsedHandRepository : IParsedHandRepository
         );
     }
 
-    public async Task UpsertParsedHand(
+    public async Task UpsertHandHistorySummary(
         string handId,
         HoleCards holeCards,
         CancellationToken cancellationToken
     )
     {
-        var parsedHand = await _dbContext.ParsedHands.SingleOrDefaultAsync(
+        var handHistorySummary = await _dbContext.HandHistorySummaries.SingleOrDefaultAsync(
             hand => hand.HandId == handId,
             cancellationToken
         );
 
-        if (parsedHand is null)
+        if (handHistorySummary is null)
         {
-            AddParsedHand(handId, holeCards);
+            AddHandHistorySummary(handId, holeCards);
             return;
         }
 
-        parsedHand.HoleCards = holeCards;
+        handHistorySummary.HoleCards = holeCards;
     }
 
-    public Task<ParsedHand[]> GetParsedHands(CancellationToken cancellationToken) =>
+    public Task<HandHistorySummary[]> GetHandHistorySummaries(CancellationToken cancellationToken) =>
         _dbContext
-            .ParsedHands.AsNoTracking()
+            .HandHistorySummaries.AsNoTracking()
             .OrderBy(hand => hand.HandId)
-            .Take(MaxParsedHands)
+            .Take(MaxHandHistorySummaries)
             .ToArrayAsync(cancellationToken);
 }
