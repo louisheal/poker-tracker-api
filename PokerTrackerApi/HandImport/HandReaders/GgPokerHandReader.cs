@@ -1,18 +1,14 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace PokerTrackerApi.HandImport.HandReaders;
 
 public class GgPokerHandReader : IPokerHandReader
 {
-    private static readonly Regex HandIdRegex = new(
-        "\\APoker Hand #(?<id>RC[0-9]+):",
-        RegexOptions.Compiled
-    );
+    public GgPokerHandReader() { }
 
-    public async IAsyncEnumerable<HandReadResult> ReadHandsAsync(
+    public async IAsyncEnumerable<string> ReadHandsAsync(
         TextReader reader,
         [EnumeratorCancellation] CancellationToken cancellationToken
     )
@@ -26,7 +22,7 @@ public class GgPokerHandReader : IPokerHandReader
                 if (currentHand is not null)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    yield return CreateResult(currentHand.ToString());
+                    yield return currentHand.ToString();
                 }
 
                 currentHand = new StringBuilder();
@@ -45,28 +41,7 @@ public class GgPokerHandReader : IPokerHandReader
         if (currentHand is not null)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            yield return CreateResult(currentHand.ToString());
+            yield return currentHand.ToString();
         }
-    }
-
-    private static HandReadResult CreateResult(string rawText)
-    {
-        if (!TryParseHandId(rawText, out var handId))
-        {
-            return new HandReadFailure(rawText, "Failed to parse hand id");
-        }
-        return new HandReadSuccess(handId, rawText);
-    }
-
-    private static bool TryParseHandId(string rawText, [NotNullWhen(true)] out string? handId)
-    {
-        var idMatch = HandIdRegex.Match(rawText);
-        if (!idMatch.Success)
-        {
-            handId = null;
-            return false;
-        }
-        handId = idMatch.Groups["id"].Value;
-        return true;
     }
 }

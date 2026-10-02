@@ -44,25 +44,45 @@ public class HandReprocessingService : IHandReprocessingService
             foreach (var rawHand in batch)
             {
                 var parseResult = _parser.ParseHand(rawHand.RawText);
-                if (parseResult.Hand == null)
+                if (parseResult is HandHistoryParseFailure failure)
                 {
                     _logger.LogWarning(
                         "Skipping hand {HandId}: {Reason}",
                         rawHand.HandId,
-                        parseResult.Error
+                        failure.Error
+                    );
+                    continue;
+                }
+
+                if (parseResult is not HandHistoryParseSuccess success)
+                {
+                    throw new InvalidOperationException(
+                        $"Unexpected parse result type: {parseResult.GetType().Name}"
+                    );
+                }
+
+                var hand =
+                    success.Hand
+                    ?? throw new InvalidOperationException(
+                        "A successful parse result must contain a parsed hand."
+                    );
+                if (!string.Equals(hand.HandId, rawHand.HandId, StringComparison.Ordinal))
+                {
+                    _logger.LogError(
+                        "Stored hand id {StoredHandId} does not match parsed hand id {ParsedHandId}",
+                        rawHand.HandId,
+                        hand.HandId
                     );
                     continue;
                 }
 
                 await _handHistorySummaryRepository.UpsertHandHistorySummary(
-                    rawHand.HandId,
-                    parseResult.Hand.HoleCards,
-                    parseResult.Hand.HeroPosition,
+                    hand.ToHandHistorySummary(),
                     cancellationToken
                 );
                 await _preflopSpotRepository.ReplacePreflopSpots(
-                    rawHand.HandId,
-                    parseResult.Hand.PreflopSpots,
+                    hand.HandId,
+                    hand.ToPreflopSpots(),
                     cancellationToken
                 );
             }

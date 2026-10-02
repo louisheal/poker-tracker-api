@@ -1,9 +1,9 @@
 namespace PokerTrackerApi.HandParsing;
 
-// TODO : split this into an abstract record, a success, and a failure
-public record HandHistoryParseResult(HandParseData? Hand, string? Error)
-{
-    public static HandHistoryParseResult Parsed(HandParseData hand) => new(hand, null);
+using PokerTrackerApi.Domain.InternalRepresentation;
 
-    public static HandHistoryParseResult Failed(string error) => new(null, error);
-}
+public abstract record HandHistoryParseResult(ParsedHandIr? Hand, string? error);
+
+public record HandHistoryParseSuccess(ParsedHandIr Hand) : HandHistoryParseResult(Hand, null);
+
+public record HandHistoryParseFailure(string Error) : HandHistoryParseResult(null, Error);

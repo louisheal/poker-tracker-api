@@ -1,18 +1,12 @@
 using Microsoft.EntityFrameworkCore;
-using PokerTrackerApi.Domain;
 using PokerTrackerApi.Persistence;
 
 namespace PokerTrackerApi.HandHistories;
 
 public interface IHandHistorySummaryRepository
 {
-    void AddHandHistorySummary(string handId, HoleCards holeCards, PokerPosition heroPosition);
-    Task UpsertHandHistorySummary(
-        string handId,
-        HoleCards holeCards,
-        PokerPosition heroPosition,
-        CancellationToken cancellationToken
-    );
+    void AddHandHistorySummary(HandHistorySummary summary);
+    Task UpsertHandHistorySummary(HandHistorySummary summary, CancellationToken cancellationToken);
     Task<HandHistorySummary[]> GetHandHistorySummaries(CancellationToken cancellationToken);
 }
 
@@ -26,41 +20,27 @@ public class HandHistorySummaryRepository : IHandHistorySummaryRepository
         _dbContext = dbContext;
     }
 
-    public void AddHandHistorySummary(
-        string handId,
-        HoleCards holeCards,
-        PokerPosition heroPosition
-    )
-    {
-        _dbContext.HandHistorySummaries.Add(
-            new HandHistorySummary
-            {
-                HandId = handId,
-                HoleCards = holeCards,
-                HeroPosition = heroPosition,
-            }
-        );
-    }
+    public void AddHandHistorySummary(HandHistorySummary summary) =>
+        _dbContext.HandHistorySummaries.Add(summary);
 
     public async Task UpsertHandHistorySummary(
-        string handId,
-        HoleCards holeCards,
-        PokerPosition heroPosition,
+        HandHistorySummary summary,
         CancellationToken cancellationToken
     )
     {
         var handHistorySummary = await _dbContext.HandHistorySummaries.SingleOrDefaultAsync(
-            hand => hand.HandId == handId,
+            hand => hand.HandId == summary.HandId,
             cancellationToken
         );
 
         if (handHistorySummary is null)
         {
-            AddHandHistorySummary(handId, holeCards, heroPosition);
+            AddHandHistorySummary(summary);
             return;
         }
 
-        handHistorySummary.HoleCards = holeCards;
+        handHistorySummary.HoleCards = summary.HoleCards;
+        handHistorySummary.HeroPosition = summary.HeroPosition;
     }
 
     public Task<HandHistorySummary[]> GetHandHistorySummaries(

@@ -59,52 +59,36 @@ public class HandImportService : IHandImportService
                 detectEncodingFromByteOrderMarks: true
             );
 
-            await foreach (var handResult in _reader.ReadHandsAsync(reader, cancellationToken))
+            await foreach (var rawHand in _reader.ReadHandsAsync(reader, cancellationToken))
             {
-                if (handResult is HandReadFailure failure)
+                var parseResult = _parser.ParseHand(rawHand);
+                if (parseResult is HandHistoryParseFailure failure)
                 {
                     invalidHands++;
                     _logger.LogWarning("Skipping hand: {Reason}", failure.Error);
                     continue;
                 }
 
-                if (handResult is not HandReadSuccess hand)
+                if (parseResult is not HandHistoryParseSuccess success)
                 {
                     throw new InvalidOperationException(
-                        $"Unexpected hand result type: {handResult.GetType().Name}"
+                        $"Unexpected parse result type: {parseResult.GetType().Name}"
                     );
                 }
 
-                var parseResult = _parser.ParseHand(hand.RawText);
-                if (parseResult.Hand == null)
-                {
-                    invalidHands++;
-                    _logger.LogWarning(
-                        "Skipping hand {HandId}: {Reason}",
-                        hand.HandId,
-                        parseResult.Error
+                var hand =
+                    success.Hand
+                    ?? throw new InvalidOperationException(
+                        "A successful parse result must contain a parsed hand."
                     );
-                    continue;
-                }
-
-                if (
-                    !await _repository.TryAddRawHandAsync(
-                        hand.HandId,
-                        hand.RawText,
-                        cancellationToken
-                    )
-                )
+                if (!await _repository.TryAddRawHandAsync(hand.HandId, rawHand, cancellationToken))
                 {
                     duplicateHands++;
                     continue;
                 }
 
-                _preflopRepository.AddPreflopSpots(hand.HandId, parseResult.Hand.PreflopSpots);
-                _handHistorySummaryRepository.AddHandHistorySummary(
-                    hand.HandId,
-                    parseResult.Hand.HoleCards,
-                    parseResult.Hand.HeroPosition
-                );
+                _preflopRepository.AddPreflopSpots(hand.ToPreflopSpots());
+                _handHistorySummaryRepository.AddHandHistorySummary(hand.ToHandHistorySummary());
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 savedHands++;

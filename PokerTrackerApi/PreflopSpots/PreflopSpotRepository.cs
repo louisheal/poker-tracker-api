@@ -6,10 +6,10 @@ namespace PokerTrackerApi.PreflopSpots;
 
 public interface IPreflopSpotRepository
 {
-    void AddPreflopSpots(string handId, IReadOnlyList<PreflopSpotObservation> observations);
+    void AddPreflopSpots(IReadOnlyList<PreflopSpot> spots);
     Task ReplacePreflopSpots(
         string handId,
-        IReadOnlyList<PreflopSpotObservation> observations,
+        IReadOnlyList<PreflopSpot> spots,
         CancellationToken cancellationToken
     );
     Task<RangeActionsDto> GetRangeAsync(string spotKey, CancellationToken cancellationToken);
@@ -24,22 +24,12 @@ public class PreflopSpotRepository : IPreflopSpotRepository
         _dbContext = dbContext;
     }
 
-    public void AddPreflopSpots(string handId, IReadOnlyList<PreflopSpotObservation> observations)
-    {
-        _dbContext.PreflopSpots.AddRange(
-            observations.Select(observation => new PreflopSpot
-            {
-                HandId = handId,
-                SpotKey = observation.SpotKey,
-                HandKey = observation.HandKey,
-                Action = observation.Action,
-            })
-        );
-    }
+    public void AddPreflopSpots(IReadOnlyList<PreflopSpot> spots) =>
+        _dbContext.PreflopSpots.AddRange(spots);
 
     public async Task ReplacePreflopSpots(
         string handId,
-        IReadOnlyList<PreflopSpotObservation> observations,
+        IReadOnlyList<PreflopSpot> spots,
         CancellationToken cancellationToken
     )
     {
@@ -49,15 +39,7 @@ public class PreflopSpotRepository : IPreflopSpotRepository
 
         _dbContext.PreflopSpots.RemoveRange(existing);
 
-        _dbContext.PreflopSpots.AddRange(
-            observations.Select(observation => new PreflopSpot
-            {
-                HandId = handId,
-                SpotKey = observation.SpotKey,
-                HandKey = observation.HandKey,
-                Action = observation.Action,
-            })
-        );
+        _dbContext.PreflopSpots.AddRange(spots);
     }
 
     public async Task<RangeActionsDto> GetRangeAsync(
