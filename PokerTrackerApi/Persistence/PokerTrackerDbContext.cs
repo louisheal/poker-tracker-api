@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.HandHistories;
 using PokerTrackerApi.HandImport;
+using PokerTrackerApi.HandReplays;
 using PokerTrackerApi.PreflopSpots;
 
 namespace PokerTrackerApi.Persistence;
@@ -15,6 +16,12 @@ public class PokerTrackerDbContext : DbContext
     public DbSet<HandHistorySummary> HandHistorySummaries => Set<HandHistorySummary>();
 
     public DbSet<PreflopSpot> PreflopSpots => Set<PreflopSpot>();
+
+    public DbSet<HandReplayPlayer> HandReplayPlayers => Set<HandReplayPlayer>();
+
+    public DbSet<HandReplayEvent> HandReplayEvents => Set<HandReplayEvent>();
+
+    public DbSet<HandReplayEventCard> HandReplayEventCards => Set<HandReplayEventCard>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +68,49 @@ public class PokerTrackerDbContext : DbContext
                 .HasOne<RawHand>()
                 .WithMany()
                 .HasForeignKey(spot => spot.HandId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HandReplayPlayer>(entity =>
+        {
+            entity.HasKey(player => new { player.HandId, player.PlayerId });
+            entity.Property(player => player.HandId).HasMaxLength(32);
+            entity.Property(player => player.Position).HasConversion<int>();
+            entity
+                .HasOne<RawHand>()
+                .WithMany()
+                .HasForeignKey(player => player.HandId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HandReplayEvent>(entity =>
+        {
+            entity.HasKey(replayEvent => new { replayEvent.HandId, replayEvent.Sequence });
+            entity.Property(replayEvent => replayEvent.HandId).HasMaxLength(32);
+            entity.Property(replayEvent => replayEvent.Street).HasMaxLength(16);
+            entity.Property(replayEvent => replayEvent.EventType).HasMaxLength(64);
+            entity.Property(replayEvent => replayEvent.PlayerId).HasMaxLength(255);
+            entity
+                .HasOne<RawHand>()
+                .WithMany()
+                .HasForeignKey(replayEvent => replayEvent.HandId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HandReplayEventCard>(entity =>
+        {
+            entity.HasKey(card => new
+            {
+                card.HandId,
+                card.Sequence,
+                card.CardIndex,
+            });
+            entity.Property(card => card.HandId).HasMaxLength(32);
+            entity.ComplexProperty(card => card.Card);
+            entity
+                .HasOne<HandReplayEvent>()
+                .WithMany()
+                .HasForeignKey(card => new { card.HandId, card.Sequence })
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

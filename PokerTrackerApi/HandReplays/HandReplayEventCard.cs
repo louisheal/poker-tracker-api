@@ -6,5 +6,6 @@ public class HandReplayEventCard
 {
     public required string HandId { get; init; }
     public required int Sequence { get; init; }
+    public required int CardIndex { get; init; }
     public required PlayingCard Card { get; init; }
 }

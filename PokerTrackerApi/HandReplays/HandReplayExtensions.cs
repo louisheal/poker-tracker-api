@@ -64,12 +64,16 @@ public static class HandReplayExtensions
             .Events.SelectMany(
                 (parsedEvent, sequence) =>
                     GetCards(parsedEvent)
-                        .Select(card => new HandReplayEventCard
-                        {
-                            HandId = hand.HandId,
-                            Sequence = sequence,
-                            Card = card,
-                        })
+                        .Select(
+                            (card, cardIndex) =>
+                                new HandReplayEventCard
+                                {
+                                    HandId = hand.HandId,
+                                    Sequence = sequence,
+                                    CardIndex = cardIndex,
+                                    Card = card,
+                                }
+                        )
             )
             .ToArray();
     }
