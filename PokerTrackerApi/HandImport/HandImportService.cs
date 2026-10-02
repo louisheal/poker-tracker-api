@@ -10,7 +10,8 @@ public interface IHandImportService
 {
     Task<HandImportSummary> ImportAsync(
         IReadOnlyCollection<IFormFile> files,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 }
 
 public class HandImportService : IHandImportService
@@ -30,7 +31,8 @@ public class HandImportService : IHandImportService
         IParsedHandRepository parsedHandRepository,
         IPokerHandParser parser,
         IPokerHandReader reader,
-        ILogger<HandImportService> logger)
+        ILogger<HandImportService> logger
+    )
     {
         _unitOfWork = unitOfWork;
         _repository = handHistoryRepository;
@@ -43,7 +45,8 @@ public class HandImportService : IHandImportService
 
     public async Task<HandImportSummary> ImportAsync(
         IReadOnlyCollection<IFormFile> files,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         var savedHands = 0;
         var duplicateHands = 0;
@@ -51,7 +54,10 @@ public class HandImportService : IHandImportService
 
         foreach (var file in files)
         {
-            using var reader = new StreamReader(file.OpenReadStream(), detectEncodingFromByteOrderMarks: true);
+            using var reader = new StreamReader(
+                file.OpenReadStream(),
+                detectEncodingFromByteOrderMarks: true
+            );
 
             await foreach (var handResult in _reader.ReadHandsAsync(reader, cancellationToken))
             {
@@ -64,18 +70,30 @@ public class HandImportService : IHandImportService
 
                 if (handResult is not HandReadSuccess hand)
                 {
-                    throw new InvalidOperationException($"Unexpected hand result type: {handResult.GetType().Name}");
+                    throw new InvalidOperationException(
+                        $"Unexpected hand result type: {handResult.GetType().Name}"
+                    );
                 }
 
                 var parseResult = _parser.ParseHand(hand.RawText);
                 if (parseResult.Hand == null)
                 {
                     invalidHands++;
-                    _logger.LogWarning("Skipping hand {HandId}: {Reason}", hand.HandId, parseResult.Error);
+                    _logger.LogWarning(
+                        "Skipping hand {HandId}: {Reason}",
+                        hand.HandId,
+                        parseResult.Error
+                    );
                     continue;
                 }
 
-                if (!await _repository.TryAddRawHandAsync(hand.HandId, hand.RawText, cancellationToken))
+                if (
+                    !await _repository.TryAddRawHandAsync(
+                        hand.HandId,
+                        hand.RawText,
+                        cancellationToken
+                    )
+                )
                 {
                     duplicateHands++;
                     continue;

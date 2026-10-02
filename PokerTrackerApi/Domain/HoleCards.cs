@@ -32,10 +32,6 @@ public record HoleCards
         var secondSuit = SuitExtensions.FromCode(second[1]);
         var secondCard = new PlayingCard(secondRank, secondSuit);
 
-        return new HoleCards
-        {
-            First = firstCard,
-            Second = secondCard,
-        };
+        return new HoleCards { First = firstCard, Second = secondCard };
     }
 }

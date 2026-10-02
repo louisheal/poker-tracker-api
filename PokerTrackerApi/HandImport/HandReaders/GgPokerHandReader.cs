@@ -7,11 +7,15 @@ namespace PokerTrackerApi.HandImport.HandReaders;
 
 public class GgPokerHandReader : IPokerHandReader
 {
-    private static readonly Regex HandIdRegex = new("\\APoker Hand #(?<id>RC[0-9]+):", RegexOptions.Compiled);
+    private static readonly Regex HandIdRegex = new(
+        "\\APoker Hand #(?<id>RC[0-9]+):",
+        RegexOptions.Compiled
+    );
 
     public async IAsyncEnumerable<HandReadResult> ReadHandsAsync(
         TextReader reader,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken
+    )
     {
         StringBuilder? currentHand = null;
 

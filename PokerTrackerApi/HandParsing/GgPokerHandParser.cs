@@ -8,12 +8,28 @@ public partial class GgPokerHandParser : IPokerHandParser
 {
     // TODO : these feel like generic Poker concepts - not specific to GG
     private static readonly string[] PositionOrder =
-    ["Lojack", "Hijack", "Cutoff", "Button", "Small Blind", "Big Blind"];
+    [
+        "Lojack",
+        "Hijack",
+        "Cutoff",
+        "Button",
+        "Small Blind",
+        "Big Blind",
+    ];
 
     private static readonly string[] PositionByButtonOffset =
-    ["Button", "Small Blind", "Big Blind", "Lojack", "Hijack", "Cutoff"];
+    [
+        "Button",
+        "Small Blind",
+        "Big Blind",
+        "Lojack",
+        "Hijack",
+        "Cutoff",
+    ];
 
-    [GeneratedRegex(@"(?m)^Dealt to Hero \[(?<first>[2-9TJQKA][cdhs]) (?<second>[2-9TJQKA][cdhs])\]\r?$")]
+    [GeneratedRegex(
+        @"(?m)^Dealt to Hero \[(?<first>[2-9TJQKA][cdhs]) (?<second>[2-9TJQKA][cdhs])\]\r?$"
+    )]
     private static partial Regex HoleCardsLineRegex();
 
     [GeneratedRegex(@"(?m)^Table .+ 6-max Seat #(?<button>[1-6]) is the button\r?$")]
@@ -37,7 +53,8 @@ public partial class GgPokerHandParser : IPokerHandParser
     private static bool TryParseHand(
         string rawText,
         [NotNullWhen(true)] out HandParseData? hand,
-        [NotNullWhen(false)] out string? error)
+        [NotNullWhen(false)] out string? error
+    )
     {
         hand = null;
         error = null;
@@ -106,8 +123,14 @@ public partial class GgPokerHandParser : IPokerHandParser
             }
 
             var player = actionMatch.Groups["player"].Value;
-            if (!playersByName.TryGetValue(player, out var position) ||
-                !TryParseAction(actionMatch.Groups["action"].Value, out var action, out var isAllIn))
+            if (
+                !playersByName.TryGetValue(player, out var position)
+                || !TryParseAction(
+                    actionMatch.Groups["action"].Value,
+                    out var action,
+                    out var isAllIn
+                )
+            )
             {
                 break;
             }
@@ -152,7 +175,8 @@ public partial class GgPokerHandParser : IPokerHandParser
         string heroPosition,
         IReadOnlyList<ObservedAction> actions,
         out string spotKey,
-        out bool isRfi)
+        out bool isRfi
+    )
     {
         spotKey = string.Empty;
         isRfi = false;
@@ -165,7 +189,10 @@ public partial class GgPokerHandParser : IPokerHandParser
         var raises = actions.Where(action => action.Action == PokerAction.Raise).ToArray();
         if (raises.Length == 0)
         {
-            if (heroPosition == "Big Blind" || actions.Any(action => action.Action != PokerAction.Fold))
+            if (
+                heroPosition == "Big Blind"
+                || actions.Any(action => action.Action != PokerAction.Fold)
+            )
             {
                 return false;
             }
@@ -175,9 +202,12 @@ public partial class GgPokerHandParser : IPokerHandParser
         else if (raises.Length == 1)
         {
             var opener = raises[0];
-            if (opener.IsAllIn || opener.Position == "Big Blind" ||
-                PositionOrder.IndexOf(opener.Position) >= PositionOrder.IndexOf(heroPosition) ||
-                actions.Any(action => action != opener && action.Action != PokerAction.Fold))
+            if (
+                opener.IsAllIn
+                || opener.Position == "Big Blind"
+                || PositionOrder.IndexOf(opener.Position) >= PositionOrder.IndexOf(heroPosition)
+                || actions.Any(action => action != opener && action.Action != PokerAction.Fold)
+            )
             {
                 return false;
             }
@@ -187,7 +217,8 @@ public partial class GgPokerHandParser : IPokerHandParser
             return false;
         }
 
-        spotKey = "X" + string.Concat(actions.Select(action => $"_{action.Position}_{action.Action}"));
+        spotKey =
+            "X" + string.Concat(actions.Select(action => $"_{action.Position}_{action.Action}"));
         return true;
     }
 

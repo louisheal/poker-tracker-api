@@ -8,7 +8,11 @@ namespace PokerTrackerApi.PreflopSpots;
 public interface IPreflopSpotRepository
 {
     void AddPreflopSpots(string handId, IReadOnlyList<PreflopSpotObservation> observations);
-    Task ReplacePreflopSpots(string handId, IReadOnlyList<PreflopSpotObservation> observations, CancellationToken cancellationToken);
+    Task ReplacePreflopSpots(
+        string handId,
+        IReadOnlyList<PreflopSpotObservation> observations,
+        CancellationToken cancellationToken
+    );
     Task<RangeActionsDto> GetRangeAsync(string spotKey, CancellationToken cancellationToken);
 }
 
@@ -23,36 +27,47 @@ public class PreflopSpotRepository : IPreflopSpotRepository
 
     public void AddPreflopSpots(string handId, IReadOnlyList<PreflopSpotObservation> observations)
     {
-        _dbContext.PreflopSpots.AddRange(observations.Select(observation => new PreflopSpot
-        {
-            HandId = handId,
-            SpotKey = observation.SpotKey,
-            HandKey = observation.HandKey,
-            Action = observation.Action,
-        }));
+        _dbContext.PreflopSpots.AddRange(
+            observations.Select(observation => new PreflopSpot
+            {
+                HandId = handId,
+                SpotKey = observation.SpotKey,
+                HandKey = observation.HandKey,
+                Action = observation.Action,
+            })
+        );
     }
 
-    public async Task ReplacePreflopSpots(string handId, IReadOnlyList<PreflopSpotObservation> observations, CancellationToken cancellationToken)
+    public async Task ReplacePreflopSpots(
+        string handId,
+        IReadOnlyList<PreflopSpotObservation> observations,
+        CancellationToken cancellationToken
+    )
     {
-        var existing = await _dbContext.PreflopSpots
-            .Where(spot => spot.HandId == handId)
+        var existing = await _dbContext
+            .PreflopSpots.Where(spot => spot.HandId == handId)
             .ToListAsync(cancellationToken);
 
         _dbContext.PreflopSpots.RemoveRange(existing);
 
-        _dbContext.PreflopSpots.AddRange(observations.Select(observation => new PreflopSpot
-        {
-            HandId = handId,
-            SpotKey = observation.SpotKey,
-            HandKey = observation.HandKey,
-            Action = observation.Action,
-        }));
+        _dbContext.PreflopSpots.AddRange(
+            observations.Select(observation => new PreflopSpot
+            {
+                HandId = handId,
+                SpotKey = observation.SpotKey,
+                HandKey = observation.HandKey,
+                Action = observation.Action,
+            })
+        );
     }
 
-    public async Task<RangeActionsDto> GetRangeAsync(string spotKey, CancellationToken cancellationToken)
+    public async Task<RangeActionsDto> GetRangeAsync(
+        string spotKey,
+        CancellationToken cancellationToken
+    )
     {
-        var actionCounts = await _dbContext.PreflopSpots
-            .AsNoTracking()
+        var actionCounts = await _dbContext
+            .PreflopSpots.AsNoTracking()
             .Where(spot => spot.SpotKey == spotKey)
             .GroupBy(spot => new { spot.HandKey, spot.Action })
             .Select(group => new
@@ -69,12 +84,16 @@ public class PreflopSpotRepository : IPreflopSpotRepository
             .Select(group =>
             {
                 var total = group.Sum(count => count.Count);
-                var countsByAction = group.ToDictionary(count => count.Action, count => count.Count);
+                var countsByAction = group.ToDictionary(
+                    count => count.Action,
+                    count => count.Count
+                );
                 return new HandActionsDto(
                     group.Key,
                     Percentage(countsByAction, PokerAction.Fold, total),
                     Percentage(countsByAction, PokerAction.Call, total),
-                    Percentage(countsByAction, PokerAction.Raise, total));
+                    Percentage(countsByAction, PokerAction.Raise, total)
+                );
             })
             .ToArray();
 
@@ -85,7 +104,8 @@ public class PreflopSpotRepository : IPreflopSpotRepository
     private static double Percentage(
         IReadOnlyDictionary<PokerAction, int> counts,
         PokerAction action,
-        int total)
+        int total
+    )
     {
         return counts.TryGetValue(action, out var count) ? (double)count / total : 0;
     }

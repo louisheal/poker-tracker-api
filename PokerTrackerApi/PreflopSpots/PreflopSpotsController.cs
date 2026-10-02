@@ -16,7 +16,8 @@ public class PreflopSpotsController : ControllerBase
     [HttpGet("range")]
     public async Task<ActionResult<RangeActionsDto>> GetRange(
         [FromQuery] string? spotKey,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         if (string.IsNullOrWhiteSpace(spotKey) || spotKey.Length > 256)
         {

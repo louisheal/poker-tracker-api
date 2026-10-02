@@ -8,9 +8,7 @@ namespace PokerTrackerApi.Persistence;
 public class PokerTrackerDbContext : DbContext
 {
     public PokerTrackerDbContext(DbContextOptions<PokerTrackerDbContext> options)
-        : base(options)
-    {
-    }
+        : base(options) { }
 
     public DbSet<RawHand> RawHands => Set<RawHand>();
 
@@ -31,15 +29,19 @@ public class PokerTrackerDbContext : DbContext
         {
             entity.HasKey(hand => hand.HandId);
             entity.Property(hand => hand.HandId).HasMaxLength(32);
-            entity.HasOne<RawHand>()
+            entity
+                .HasOne<RawHand>()
                 .WithOne()
                 .HasForeignKey<ParsedHand>(hand => hand.HandId)
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.ComplexProperty(hand => hand.HoleCards, holeCards =>
-            {
-                holeCards.ComplexProperty(cards => cards.First);
-                holeCards.ComplexProperty(cards => cards.Second);
-            });
+            entity.ComplexProperty(
+                hand => hand.HoleCards,
+                holeCards =>
+                {
+                    holeCards.ComplexProperty(cards => cards.First);
+                    holeCards.ComplexProperty(cards => cards.Second);
+                }
+            );
         });
 
         modelBuilder.Entity<PreflopSpot>(entity =>
@@ -49,8 +51,14 @@ public class PokerTrackerDbContext : DbContext
             entity.Property(spot => spot.SpotKey).HasMaxLength(256);
             entity.Property(spot => spot.HandKey).HasMaxLength(3);
             entity.Property(spot => spot.Action).HasConversion<string>().HasMaxLength(16);
-            entity.HasIndex(spot => new { spot.SpotKey, spot.HandKey, spot.Action });
-            entity.HasOne<RawHand>()
+            entity.HasIndex(spot => new
+            {
+                spot.SpotKey,
+                spot.HandKey,
+                spot.Action,
+            });
+            entity
+                .HasOne<RawHand>()
                 .WithMany()
                 .HasForeignKey(spot => spot.HandId)
                 .OnDelete(DeleteBehavior.Cascade);

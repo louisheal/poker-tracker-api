@@ -1,12 +1,12 @@
-using Microsoft.OpenApi;
 using Microsoft.EntityFrameworkCore;
-using PokerTrackerApi.Persistence;
+using Microsoft.OpenApi;
 using PokerTrackerApi.HandHistories;
-using PokerTrackerApi.PreflopSpots;
 using PokerTrackerApi.HandImport;
 using PokerTrackerApi.HandImport.HandReaders;
 using PokerTrackerApi.HandParsing;
 using PokerTrackerApi.HandReprocessing;
+using PokerTrackerApi.Persistence;
+using PokerTrackerApi.PreflopSpots;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,15 +36,14 @@ builder.Services.AddDbContext<PokerTrackerDbContext>(options =>
 
 builder.Services.AddOpenApi(options =>
 {
-    options.AddDocumentTransformer((document, context, cancellationToken) =>
-    {
-        document.Servers = new List<OpenApiServer>
+    options.AddDocumentTransformer(
+        (document, context, cancellationToken) =>
         {
-            new() { Url = "/" }
-        };
+            document.Servers = new List<OpenApiServer> { new() { Url = "/" } };
 
-        return Task.CompletedTask;
-    });
+            return Task.CompletedTask;
+        }
+    );
 });
 
 builder.Services.AddCors(options =>

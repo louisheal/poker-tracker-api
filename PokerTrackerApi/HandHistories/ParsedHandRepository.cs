@@ -26,9 +26,16 @@ public class ParsedHandRepository : IParsedHandRepository
         _dbContext.ParsedHands.Add(new ParsedHand { HandId = handId, HoleCards = holeCards });
     }
 
-    public async Task UpsertParsedHand(string handId, HoleCards holeCards, CancellationToken cancellationToken)
+    public async Task UpsertParsedHand(
+        string handId,
+        HoleCards holeCards,
+        CancellationToken cancellationToken
+    )
     {
-        var parsedHand = await _dbContext.ParsedHands.SingleOrDefaultAsync(hand => hand.HandId == handId, cancellationToken);
+        var parsedHand = await _dbContext.ParsedHands.SingleOrDefaultAsync(
+            hand => hand.HandId == handId,
+            cancellationToken
+        );
 
         if (parsedHand is null)
         {
@@ -40,8 +47,8 @@ public class ParsedHandRepository : IParsedHandRepository
     }
 
     public Task<ParsedHand[]> GetParsedHands(CancellationToken cancellationToken) =>
-        _dbContext.ParsedHands
-            .AsNoTracking()
+        _dbContext
+            .ParsedHands.AsNoTracking()
             .OrderBy(hand => hand.HandId)
             .Take(MaxParsedHands)
             .ToArrayAsync(cancellationToken);

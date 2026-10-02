@@ -6,8 +6,14 @@ namespace PokerTrackerApi.HandImport;
 
 public interface IRawHandRepository
 {
-    Task<bool> TryAddRawHandAsync(string handId, string rawText, CancellationToken cancellationToken);
-    IAsyncEnumerable<IReadOnlyList<RawHand>> GetRawHandsBatchedAsync(CancellationToken cancellationToken);
+    Task<bool> TryAddRawHandAsync(
+        string handId,
+        string rawText,
+        CancellationToken cancellationToken
+    );
+    IAsyncEnumerable<IReadOnlyList<RawHand>> GetRawHandsBatchedAsync(
+        CancellationToken cancellationToken
+    );
 }
 
 public class RawHandRepository : IRawHandRepository
@@ -19,7 +25,11 @@ public class RawHandRepository : IRawHandRepository
         _dbContext = dbContext;
     }
 
-    public async Task<bool> TryAddRawHandAsync(string handId, string rawText, CancellationToken cancellationToken)
+    public async Task<bool> TryAddRawHandAsync(
+        string handId,
+        string rawText,
+        CancellationToken cancellationToken
+    )
     {
         if (await _dbContext.RawHands.AnyAsync(hand => hand.HandId == handId, cancellationToken))
         {
@@ -31,15 +41,16 @@ public class RawHandRepository : IRawHandRepository
     }
 
     public async IAsyncEnumerable<IReadOnlyList<RawHand>> GetRawHandsBatchedAsync(
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken
+    )
     {
         const int batchSize = 100;
         var offset = 0;
 
         while (true)
         {
-            var batch = await _dbContext.RawHands
-                .AsNoTracking()
+            var batch = await _dbContext
+                .RawHands.AsNoTracking()
                 .OrderBy(hand => hand.HandId)
                 .Skip(offset)
                 .Take(batchSize)

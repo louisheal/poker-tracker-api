@@ -26,7 +26,8 @@ public class HandReprocessingService : IHandReprocessingService
         IParsedHandRepository parsedHandRepository,
         IPreflopSpotRepository preflopSpotRepository,
         IUnitOfWork unitOfWork,
-        ILogger<IHandReprocessingService> logger)
+        ILogger<IHandReprocessingService> logger
+    )
     {
         _parser = parser;
         _rawHandRepository = rawHandRepository;
@@ -45,12 +46,24 @@ public class HandReprocessingService : IHandReprocessingService
                 var parseResult = _parser.ParseHand(rawHand.RawText);
                 if (parseResult.Hand == null)
                 {
-                    _logger.LogWarning("Skipping hand {HandId}: {Reason}", rawHand.HandId, parseResult.Error);
+                    _logger.LogWarning(
+                        "Skipping hand {HandId}: {Reason}",
+                        rawHand.HandId,
+                        parseResult.Error
+                    );
                     continue;
                 }
 
-                await _parsedHandRepository.UpsertParsedHand(rawHand.HandId, parseResult.Hand.HoleCards, cancellationToken);
-                await _preflopSpotRepository.ReplacePreflopSpots(rawHand.HandId, parseResult.Hand.PreflopSpots, cancellationToken);
+                await _parsedHandRepository.UpsertParsedHand(
+                    rawHand.HandId,
+                    parseResult.Hand.HoleCards,
+                    cancellationToken
+                );
+                await _preflopSpotRepository.ReplacePreflopSpots(
+                    rawHand.HandId,
+                    parseResult.Hand.PreflopSpots,
+                    cancellationToken
+                );
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

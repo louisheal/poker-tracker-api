@@ -15,7 +15,8 @@ public class UnitOfWork : IUnitOfWork
         _dbContext = dbContext;
     }
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken) => _dbContext.SaveChangesAsync(cancellationToken);
+    public Task SaveChangesAsync(CancellationToken cancellationToken) =>
+        _dbContext.SaveChangesAsync(cancellationToken);
 
     public void ClearTracking() => _dbContext.ChangeTracker.Clear();
 }

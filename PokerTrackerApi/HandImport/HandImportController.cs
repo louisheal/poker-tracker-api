@@ -17,7 +17,8 @@ public class HandImportController : ControllerBase
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<HandImportSummary>> Upload(
         [FromForm] List<IFormFile> files,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         if (files.Count == 0)
         {
