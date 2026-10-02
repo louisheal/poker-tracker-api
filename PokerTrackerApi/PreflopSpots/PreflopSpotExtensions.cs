@@ -4,26 +4,16 @@ using PokerTrackerApi.Domain.InternalRepresentation.Events;
 
 namespace PokerTrackerApi.PreflopSpots;
 
-public sealed class PreflopSpotExtractor
+public static class PreflopSpotExtensions
 {
-    private static readonly string[] PositionNames =
-    [
-        "Lojack",
-        "Hijack",
-        "Cutoff",
-        "Button",
-        "Small Blind",
-        "Big Blind",
-    ];
-
-    public IReadOnlyList<PreflopSpotObservation> Extract(ParsedHandIr hand)
+    public static IReadOnlyList<PreflopSpot> ToPreflopSpots(this ParsedHandIr hand)
     {
         ArgumentNullException.ThrowIfNull(hand);
 
         var heroPosition = hand.Players[hand.HeroPlayerId].Position;
         var handKey = hand.HeroHoleCards.HandKey();
         var actions = new List<ObservedAction>();
-        var observations = new List<PreflopSpotObservation>();
+        var spots = new List<PreflopSpot>();
 
         foreach (var handEvent in hand.Events)
         {
@@ -59,13 +49,21 @@ public sealed class PreflopSpotExtractor
                     break;
                 }
 
-                observations.Add(new PreflopSpotObservation(spotKey, handKey, action));
+                spots.Add(
+                    new PreflopSpot
+                    {
+                        HandId = hand.HandId,
+                        SpotKey = spotKey,
+                        HandKey = handKey,
+                        Action = action,
+                    }
+                );
             }
 
             actions.Add(new ObservedAction(player.Position, action, isAllIn));
         }
 
-        return observations;
+        return spots;
     }
 
     private static bool TryGetAction(
@@ -141,12 +139,22 @@ public sealed class PreflopSpotExtractor
         spotKey =
             "X"
             + string.Concat(
-                actions.Select(action =>
-                    $"_{PositionNames[GetPositionOrder(action.Position)]}_{action.Action}"
-                )
+                actions.Select(action => $"_{GetPositionName(action.Position)}_{action.Action}")
             );
         return true;
     }
+
+    private static string GetPositionName(PokerPosition position) =>
+        position switch
+        {
+            PokerPosition.LJ => "Lojack",
+            PokerPosition.HJ => "Hijack",
+            PokerPosition.CO => "Cutoff",
+            PokerPosition.BTN => "Button",
+            PokerPosition.SB => "Small Blind",
+            PokerPosition.BB => "Big Blind",
+            _ => throw new ArgumentOutOfRangeException(nameof(position), position, null),
+        };
 
     private static int GetPositionOrder(PokerPosition position) =>
         position switch

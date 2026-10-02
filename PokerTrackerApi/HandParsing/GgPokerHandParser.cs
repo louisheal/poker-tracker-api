@@ -154,9 +154,21 @@ public partial class GgPokerHandParser : IPokerHandParser
             actions.Add(new ObservedAction(position, action, isAllIn));
         }
 
-        hand = new HandParseData(holeCards, observations);
+        hand = new HandParseData(holeCards, ToPokerPosition(heroPosition), observations);
         return true;
     }
+
+    private static PokerPosition ToPokerPosition(string position) =>
+        position switch
+        {
+            "Lojack" => PokerPosition.LJ,
+            "Hijack" => PokerPosition.HJ,
+            "Cutoff" => PokerPosition.CO,
+            "Button" => PokerPosition.BTN,
+            "Small Blind" => PokerPosition.SB,
+            "Big Blind" => PokerPosition.BB,
+            _ => throw new ArgumentOutOfRangeException(nameof(position), position, null),
+        };
 
     private static bool TryParseHoleCards(string rawHand, out HoleCards? holeCards)
     {

@@ -6,10 +6,11 @@ namespace PokerTrackerApi.HandHistories;
 
 public interface IHandHistorySummaryRepository
 {
-    void AddHandHistorySummary(string handId, HoleCards holeCards);
+    void AddHandHistorySummary(string handId, HoleCards holeCards, PokerPosition heroPosition);
     Task UpsertHandHistorySummary(
         string handId,
         HoleCards holeCards,
+        PokerPosition heroPosition,
         CancellationToken cancellationToken
     );
     Task<HandHistorySummary[]> GetHandHistorySummaries(CancellationToken cancellationToken);
@@ -25,14 +26,18 @@ public class HandHistorySummaryRepository : IHandHistorySummaryRepository
         _dbContext = dbContext;
     }
 
-    public void AddHandHistorySummary(string handId, HoleCards holeCards)
+    public void AddHandHistorySummary(
+        string handId,
+        HoleCards holeCards,
+        PokerPosition heroPosition
+    )
     {
         _dbContext.HandHistorySummaries.Add(
             new HandHistorySummary
             {
                 HandId = handId,
                 HoleCards = holeCards,
-                ButtonSeat = 0,
+                HeroPosition = heroPosition,
             }
         );
     }
@@ -40,6 +45,7 @@ public class HandHistorySummaryRepository : IHandHistorySummaryRepository
     public async Task UpsertHandHistorySummary(
         string handId,
         HoleCards holeCards,
+        PokerPosition heroPosition,
         CancellationToken cancellationToken
     )
     {
@@ -50,7 +56,7 @@ public class HandHistorySummaryRepository : IHandHistorySummaryRepository
 
         if (handHistorySummary is null)
         {
-            AddHandHistorySummary(handId, holeCards);
+            AddHandHistorySummary(handId, holeCards, heroPosition);
             return;
         }
 

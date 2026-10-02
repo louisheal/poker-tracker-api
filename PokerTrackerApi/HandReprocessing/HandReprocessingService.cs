@@ -57,6 +57,7 @@ public class HandReprocessingService : IHandReprocessingService
                 await _handHistorySummaryRepository.UpsertHandHistorySummary(
                     rawHand.HandId,
                     parseResult.Hand.HoleCards,
+                    parseResult.Hand.HeroPosition,
                     cancellationToken
                 );
                 await _preflopSpotRepository.ReplacePreflopSpots(

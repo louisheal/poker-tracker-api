@@ -102,7 +102,8 @@ public class HandImportService : IHandImportService
                 _preflopRepository.AddPreflopSpots(hand.HandId, parseResult.Hand.PreflopSpots);
                 _handHistorySummaryRepository.AddHandHistorySummary(
                     hand.HandId,
-                    parseResult.Hand.HoleCards
+                    parseResult.Hand.HoleCards,
+                    parseResult.Hand.HeroPosition
                 );
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
