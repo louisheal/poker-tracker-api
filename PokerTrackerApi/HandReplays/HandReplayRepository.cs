@@ -5,6 +5,7 @@ namespace PokerTrackerApi.HandReplays;
 
 public interface IHandReplayRepository
 {
+    Task<HandReplay?> GetHandReplayAsync(string handId, CancellationToken cancellationToken);
     void AddHandReplay(HandReplay replay);
     Task UpsertHandReplay(HandReplay replay, CancellationToken cancellationToken);
 }
@@ -17,6 +18,17 @@ public class HandReplayRepository : IHandReplayRepository
     {
         _dbContext = dbContext;
     }
+
+    public Task<HandReplay?> GetHandReplayAsync(
+        string handId,
+        CancellationToken cancellationToken
+    ) =>
+        _dbContext
+            .HandReplays.AsNoTracking()
+            .Include(replay => replay.Players)
+            .Include(replay => replay.Events)
+                .ThenInclude(handEvent => handEvent.Cards)
+            .SingleOrDefaultAsync(replay => replay.HandId == handId, cancellationToken);
 
     public void AddHandReplay(HandReplay replay) => _dbContext.HandReplays.Add(replay);
 

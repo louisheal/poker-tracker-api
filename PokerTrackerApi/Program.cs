@@ -20,6 +20,7 @@ builder.Services.AddScoped<IRawHandRepository, RawHandRepository>();
 
 builder.Services.AddScoped<IHandReprocessingService, HandReprocessingService>();
 builder.Services.AddScoped<IHandHistoryMapper, HandHistoryMapper>();
+builder.Services.AddScoped<IHandReplayMapper, HandReplayMapper>();
 builder.Services.AddScoped<IHandImportService, HandImportService>();
 builder.Services.AddScoped<IPokerHandReader, GgPokerHandReader>();
 builder.Services.AddScoped<IPokerHandParser, GgPokerHandParser>();
