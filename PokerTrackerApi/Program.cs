@@ -4,6 +4,7 @@ using PokerTrackerApi.HandHistories;
 using PokerTrackerApi.HandImport;
 using PokerTrackerApi.HandImport.HandReaders;
 using PokerTrackerApi.HandParsing;
+using PokerTrackerApi.HandReplays;
 using PokerTrackerApi.HandReprocessing;
 using PokerTrackerApi.Persistence;
 using PokerTrackerApi.PreflopSpots;
@@ -13,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<IHandHistorySummaryRepository, HandHistorySummaryRepository>();
+builder.Services.AddScoped<IHandReplayRepository, HandReplayRepository>();
 builder.Services.AddScoped<IPreflopSpotRepository, PreflopSpotRepository>();
 builder.Services.AddScoped<IRawHandRepository, RawHandRepository>();
 

@@ -80,7 +80,7 @@ public class PokerTrackerDbContext : DbContext
             entity.Property(player => player.Position).HasConversion<int>();
             entity
                 .HasOne<HandReplay>()
-                .WithMany()
+                .WithMany(replay => replay.Players)
                 .HasForeignKey(player => player.HandId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
@@ -94,7 +94,7 @@ public class PokerTrackerDbContext : DbContext
             entity.Property(replayEvent => replayEvent.PlayerId).HasMaxLength(255);
             entity
                 .HasOne<HandReplay>()
-                .WithMany()
+                .WithMany(replay => replay.Events)
                 .HasForeignKey(replayEvent => replayEvent.HandId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
@@ -111,7 +111,7 @@ public class PokerTrackerDbContext : DbContext
             entity.ComplexProperty(card => card.Card);
             entity
                 .HasOne<HandReplayEvent>()
-                .WithMany()
+                .WithMany(replayEvent => replayEvent.Cards)
                 .HasForeignKey(card => new { card.HandId, card.Sequence })
                 .OnDelete(DeleteBehavior.Cascade);
         });

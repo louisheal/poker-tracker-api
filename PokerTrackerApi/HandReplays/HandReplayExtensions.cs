@@ -15,6 +15,8 @@ public static class HandReplayExtensions
             HandId = hand.HandId,
             HeroHoleCards = hand.HeroHoleCards,
             HeroPosition = hand.Players[hand.HeroPlayerId].Position,
+            Players = hand.ToHandReplayPlayers(),
+            Events = hand.ToHandReplayEvents(),
         };
     }
 
@@ -49,6 +51,19 @@ public static class HandReplayExtensions
                 street = boardDealt.Street;
             }
 
+            var cards = GetCards(parsedEvent)
+                .Select(
+                    (card, cardIndex) =>
+                        new HandReplayEventCard
+                        {
+                            HandId = hand.HandId,
+                            Sequence = sequence,
+                            CardIndex = cardIndex,
+                            Card = card,
+                        }
+                )
+                .ToList();
+
             replayEvents.Add(
                 new HandReplayEvent
                 {
@@ -61,33 +76,12 @@ public static class HandReplayExtensions
                     RaiseToAmountBB = parsedEvent is PlayerRaiseEvent raise
                         ? raise.RaiseToAmountBB
                         : null,
+                    Cards = cards,
                 }
             );
         }
 
         return replayEvents.ToArray();
-    }
-
-    public static HandReplayEventCard[] ToHandReplayEventCards(this ParsedHand hand)
-    {
-        ArgumentNullException.ThrowIfNull(hand);
-
-        return hand
-            .Events.SelectMany(
-                (parsedEvent, sequence) =>
-                    GetCards(parsedEvent)
-                        .Select(
-                            (card, cardIndex) =>
-                                new HandReplayEventCard
-                                {
-                                    HandId = hand.HandId,
-                                    Sequence = sequence,
-                                    CardIndex = cardIndex,
-                                    Card = card,
-                                }
-                        )
-            )
-            .ToArray();
     }
 
     private static string? GetPlayerId(ParsedHandEvent parsedEvent) =>

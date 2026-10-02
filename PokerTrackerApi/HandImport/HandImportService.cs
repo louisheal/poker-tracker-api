@@ -1,6 +1,7 @@
 using PokerTrackerApi.HandHistories;
 using PokerTrackerApi.HandImport.HandReaders;
 using PokerTrackerApi.HandParsing;
+using PokerTrackerApi.HandReplays;
 using PokerTrackerApi.Persistence;
 using PokerTrackerApi.PreflopSpots;
 
@@ -20,6 +21,7 @@ public class HandImportService : IHandImportService
     private readonly IRawHandRepository _repository;
     private readonly IPreflopSpotRepository _preflopRepository;
     private readonly IHandHistorySummaryRepository _handHistorySummaryRepository;
+    private readonly IHandReplayRepository _handReplayRepository;
     private readonly IPokerHandParser _parser;
     private readonly IPokerHandReader _reader;
     private readonly ILogger<HandImportService> _logger;
@@ -29,6 +31,7 @@ public class HandImportService : IHandImportService
         IRawHandRepository handHistoryRepository,
         IPreflopSpotRepository preflopRepository,
         IHandHistorySummaryRepository handHistorySummaryRepository,
+        IHandReplayRepository handReplayRepository,
         IPokerHandParser parser,
         IPokerHandReader reader,
         ILogger<HandImportService> logger
@@ -38,6 +41,7 @@ public class HandImportService : IHandImportService
         _repository = handHistoryRepository;
         _preflopRepository = preflopRepository;
         _handHistorySummaryRepository = handHistorySummaryRepository;
+        _handReplayRepository = handReplayRepository;
         _parser = parser;
         _logger = logger;
         _reader = reader;
@@ -89,6 +93,7 @@ public class HandImportService : IHandImportService
 
                 _preflopRepository.AddPreflopSpots(hand.ToPreflopSpots());
                 _handHistorySummaryRepository.AddHandHistorySummary(hand.ToHandHistorySummary());
+                _handReplayRepository.AddHandReplay(hand.ToHandReplay());
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 savedHands++;
