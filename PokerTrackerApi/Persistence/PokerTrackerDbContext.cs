@@ -17,6 +17,8 @@ public class PokerTrackerDbContext : DbContext
 
     public DbSet<PreflopSpot> PreflopSpots => Set<PreflopSpot>();
 
+    public DbSet<HandReplay> HandReplays => Set<HandReplay>();
+
     public DbSet<HandReplayPlayer> HandReplayPlayers => Set<HandReplayPlayer>();
 
     public DbSet<HandReplayEvent> HandReplayEvents => Set<HandReplayEvent>();
@@ -77,7 +79,7 @@ public class PokerTrackerDbContext : DbContext
             entity.Property(player => player.HandId).HasMaxLength(32);
             entity.Property(player => player.Position).HasConversion<int>();
             entity
-                .HasOne<RawHand>()
+                .HasOne<HandReplay>()
                 .WithMany()
                 .HasForeignKey(player => player.HandId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -91,7 +93,7 @@ public class PokerTrackerDbContext : DbContext
             entity.Property(replayEvent => replayEvent.EventType).HasMaxLength(64);
             entity.Property(replayEvent => replayEvent.PlayerId).HasMaxLength(255);
             entity
-                .HasOne<RawHand>()
+                .HasOne<HandReplay>()
                 .WithMany()
                 .HasForeignKey(replayEvent => replayEvent.HandId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -112,6 +114,26 @@ public class PokerTrackerDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(card => new { card.HandId, card.Sequence })
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HandReplay>(entity =>
+        {
+            entity.HasKey(replay => replay.HandId);
+            entity.Property(replay => replay.HandId).HasMaxLength(32);
+            entity.Property(replay => replay.HeroPosition).HasConversion<int>();
+            entity
+                .HasOne<RawHand>()
+                .WithOne()
+                .HasForeignKey<HandReplay>(replay => replay.HandId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ComplexProperty(
+                replay => replay.HeroHoleCards,
+                holeCards =>
+                {
+                    holeCards.ComplexProperty(cards => cards.First);
+                    holeCards.ComplexProperty(cards => cards.Second);
+                }
+            );
         });
     }
 }

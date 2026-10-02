@@ -6,6 +6,18 @@ namespace PokerTrackerApi.HandReplays;
 
 public static class HandReplayExtensions
 {
+    public static HandReplay ToHandReplay(this ParsedHand hand)
+    {
+        ArgumentNullException.ThrowIfNull(hand);
+
+        return new HandReplay
+        {
+            HandId = hand.HandId,
+            HeroHoleCards = hand.HeroHoleCards,
+            HeroPosition = hand.Players[hand.HeroPlayerId].Position,
+        };
+    }
+
     public static HandReplayPlayer[] ToHandReplayPlayers(this ParsedHand hand)
     {
         ArgumentNullException.ThrowIfNull(hand);
