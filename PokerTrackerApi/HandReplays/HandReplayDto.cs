@@ -1,4 +1,6 @@
-namespace PokerTrackerApi.HandHistories.HandReplays;
+using PokerTrackerApi.Contract;
+
+namespace PokerTrackerApi.HandReplays;
 
 public record HandReplayDto(
     string HandId,

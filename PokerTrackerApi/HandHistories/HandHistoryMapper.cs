@@ -1,3 +1,4 @@
+using PokerTrackerApi.Contract;
 using PokerTrackerApi.Domain;
 
 namespace PokerTrackerApi.HandHistories;

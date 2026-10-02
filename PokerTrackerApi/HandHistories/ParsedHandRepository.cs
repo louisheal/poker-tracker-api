@@ -23,7 +23,14 @@ public class ParsedHandRepository : IParsedHandRepository
 
     public void AddParsedHand(string handId, HoleCards holeCards)
     {
-        _dbContext.ParsedHands.Add(new ParsedHand { HandId = handId, HoleCards = holeCards });
+        _dbContext.ParsedHands.Add(
+            new ParsedHand
+            {
+                HandId = handId,
+                HoleCards = holeCards,
+                ButtonSeat = 0,
+            }
+        );
     }
 
     public async Task UpsertParsedHand(

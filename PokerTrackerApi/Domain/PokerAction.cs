@@ -5,4 +5,6 @@ public enum PokerAction
     Fold,
     Call,
     Raise,
+    Bet,
+    Check,
 }

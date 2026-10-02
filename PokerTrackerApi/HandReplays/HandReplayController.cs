@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using PokerTrackerApi.Contract;
 
-namespace PokerTrackerApi.HandHistories.HandReplays;
+namespace PokerTrackerApi.HandReplays;
 
 [Controller]
 [Route("api/handreplay")]
