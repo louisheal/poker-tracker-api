@@ -95,7 +95,7 @@ public partial class GgPokerHandParser : IPokerHandParser
 
     private static bool TryParseHand(
         string rawText,
-        [NotNullWhen(true)] out ParsedHandIr? hand,
+        [NotNullWhen(true)] out ParsedHand? hand,
         [NotNullWhen(false)] out string? error
     )
     {
@@ -357,7 +357,7 @@ public partial class GgPokerHandParser : IPokerHandParser
             events.Add(playerAction);
         }
 
-        hand = new ParsedHandIr(handHeader.Groups["id"].Value, "Hero", holeCards, players, events);
+        hand = new ParsedHand(handHeader.Groups["id"].Value, "Hero", holeCards, players, events);
         return true;
     }
 

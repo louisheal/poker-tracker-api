@@ -2,8 +2,8 @@ namespace PokerTrackerApi.HandParsing;
 
 using PokerTrackerApi.Domain.InternalRepresentation;
 
-public abstract record HandHistoryParseResult(ParsedHandIr? Hand, string? error);
+public abstract record HandHistoryParseResult(ParsedHand? Hand, string? error);
 
-public record HandHistoryParseSuccess(ParsedHandIr Hand) : HandHistoryParseResult(Hand, null);
+public record HandHistoryParseSuccess(ParsedHand Hand) : HandHistoryParseResult(Hand, null);
 
 public record HandHistoryParseFailure(string Error) : HandHistoryParseResult(null, Error);

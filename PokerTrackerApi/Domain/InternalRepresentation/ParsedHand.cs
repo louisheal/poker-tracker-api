@@ -2,7 +2,7 @@ namespace PokerTrackerApi.Domain.InternalRepresentation;
 
 using PokerTrackerApi.Domain.InternalRepresentation.Events;
 
-public record ParsedHandIr(
+public record ParsedHand(
     string HandId,
     string HeroPlayerId,
     HoleCards HeroHoleCards,

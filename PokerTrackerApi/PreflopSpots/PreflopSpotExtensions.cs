@@ -6,7 +6,7 @@ namespace PokerTrackerApi.PreflopSpots;
 
 public static class PreflopSpotExtensions
 {
-    public static IReadOnlyList<PreflopSpot> ToPreflopSpots(this ParsedHandIr hand)
+    public static IReadOnlyList<PreflopSpot> ToPreflopSpots(this ParsedHand hand)
     {
         ArgumentNullException.ThrowIfNull(hand);
 

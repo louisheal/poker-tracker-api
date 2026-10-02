@@ -4,7 +4,7 @@ namespace PokerTrackerApi.HandHistories;
 
 public static class HandHistorySummaryExtensions
 {
-    public static HandHistorySummary ToHandHistorySummary(this ParsedHandIr hand)
+    public static HandHistorySummary ToHandHistorySummary(this ParsedHand hand)
     {
         ArgumentNullException.ThrowIfNull(hand);
 
