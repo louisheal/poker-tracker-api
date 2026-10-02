@@ -15,23 +15,18 @@ namespace PokerTrackerApi.Persistence.Migrations
                 table: "ParsedHands",
                 type: "int",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 0
+            );
 
-            migrationBuilder.RenameTable(
-                name: "ParsedHands",
-                newName: "HandHistorySummaries");
+            migrationBuilder.RenameTable(name: "ParsedHands", newName: "HandHistorySummaries");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.RenameTable(
-                name: "HandHistorySummaries",
-                newName: "ParsedHands");
+            migrationBuilder.RenameTable(name: "HandHistorySummaries", newName: "ParsedHands");
 
-            migrationBuilder.DropColumn(
-                name: "ButtonSeat",
-                table: "ParsedHands");
+            migrationBuilder.DropColumn(name: "ButtonSeat", table: "ParsedHands");
         }
     }
 }

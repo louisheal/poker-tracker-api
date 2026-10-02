@@ -9,7 +9,10 @@ public class HandHistoryController : ControllerBase
     private readonly IHandHistorySummaryRepository _repository;
     private readonly IHandHistoryMapper _mapper;
 
-    public HandHistoryController(IHandHistorySummaryRepository repository, IHandHistoryMapper mapper)
+    public HandHistoryController(
+        IHandHistorySummaryRepository repository,
+        IHandHistoryMapper mapper
+    )
     {
         _repository = repository;
         _mapper = mapper;

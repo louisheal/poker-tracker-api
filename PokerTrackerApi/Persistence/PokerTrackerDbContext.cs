@@ -32,7 +32,7 @@ public class PokerTrackerDbContext : DbContext
             entity
                 .HasOne<RawHand>()
                 .WithOne()
-            .HasForeignKey<HandHistorySummary>(hand => hand.HandId)
+                .HasForeignKey<HandHistorySummary>(hand => hand.HandId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.ComplexProperty(
                 hand => hand.HoleCards,

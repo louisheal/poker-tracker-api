@@ -7,7 +7,11 @@ namespace PokerTrackerApi.HandHistories;
 public interface IHandHistorySummaryRepository
 {
     void AddHandHistorySummary(string handId, HoleCards holeCards);
-    Task UpsertHandHistorySummary(string handId, HoleCards holeCards, CancellationToken cancellationToken);
+    Task UpsertHandHistorySummary(
+        string handId,
+        HoleCards holeCards,
+        CancellationToken cancellationToken
+    );
     Task<HandHistorySummary[]> GetHandHistorySummaries(CancellationToken cancellationToken);
 }
 
@@ -53,7 +57,9 @@ public class HandHistorySummaryRepository : IHandHistorySummaryRepository
         handHistorySummary.HoleCards = holeCards;
     }
 
-    public Task<HandHistorySummary[]> GetHandHistorySummaries(CancellationToken cancellationToken) =>
+    public Task<HandHistorySummary[]> GetHandHistorySummaries(
+        CancellationToken cancellationToken
+    ) =>
         _dbContext
             .HandHistorySummaries.AsNoTracking()
             .OrderBy(hand => hand.HandId)
