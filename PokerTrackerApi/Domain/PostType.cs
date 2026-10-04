@@ -1,4 +1,4 @@
-namespace PokerTrackerApi.Domain.InternalRepresentation;
+namespace PokerTrackerApi.Domain;
 
 public enum PostType
 {
