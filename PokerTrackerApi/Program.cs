@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using PokerTrackerApi.HandHistories;
-using PokerTrackerApi.HandImport;
 using PokerTrackerApi.HandImport.HandReaders;
+using PokerTrackerApi.HandImports;
 using PokerTrackerApi.HandParsing;
 using PokerTrackerApi.HandReplays;
 using PokerTrackerApi.HandReprocessing;
@@ -13,14 +13,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddScoped<IHandHistorySummaryRepository, HandHistorySummaryRepository>();
+builder.Services.AddScoped<IHandHistoryRepository, HandHistoryRepository>();
 builder.Services.AddScoped<IHandReplayRepository, HandReplayRepository>();
 builder.Services.AddScoped<IPreflopSpotRepository, PreflopSpotRepository>();
 builder.Services.AddScoped<IRawHandRepository, RawHandRepository>();
+builder.Services.AddScoped<IHandImportRepository, HandImportRepository>();
 
 builder.Services.AddScoped<IHandReprocessingService, HandReprocessingService>();
 builder.Services.AddScoped<IHandHistoryMapper, HandHistoryMapper>();
-builder.Services.AddScoped<IHandReplayMapper, HandReplayMapper>();
 builder.Services.AddScoped<IHandImportService, HandImportService>();
 builder.Services.AddScoped<IPokerHandReader, GgPokerHandReader>();
 builder.Services.AddScoped<IPokerHandParser, GgPokerHandParser>();

@@ -78,7 +78,6 @@ public class PreflopSpotRepository : IPreflopSpotRepository
             })
             .ToArray();
 
-        // TODO : do we need to return the spotKey here?
         return new RangeActionsDto(spotKey, hands);
     }
 

@@ -2,8 +2,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using PokerTrackerApi.Domain;
-using PokerTrackerApi.Domain.InternalRepresentation;
-using PokerTrackerApi.Domain.InternalRepresentation.Events;
+using PokerTrackerApi.Domain.PokerHand;
+using PokerTrackerApi.Domain.PokerHand.Events;
 
 namespace PokerTrackerApi.HandParsing;
 
@@ -95,7 +95,7 @@ public partial class GgPokerHandParser : IPokerHandParser
 
     private static bool TryParseHand(
         string rawText,
-        [NotNullWhen(true)] out ParsedHand? hand,
+        [NotNullWhen(true)] out PokerHand? hand,
         [NotNullWhen(false)] out string? error
     )
     {
@@ -146,7 +146,7 @@ public partial class GgPokerHandParser : IPokerHandParser
         }
 
         var seenSeats = new HashSet<int>();
-        var players = new Dictionary<string, ParsedPlayer>(StringComparer.Ordinal);
+        var players = new Dictionary<string, PokerHandPlayer>(StringComparer.Ordinal);
         foreach (Match seatMatch in seatMatches)
         {
             if (
@@ -168,7 +168,12 @@ public partial class GgPokerHandParser : IPokerHandParser
                 !seenSeats.Add(seat)
                 || !players.TryAdd(
                     name,
-                    new ParsedPlayer(PositionByButtonOffset[offset], startingStack / bigBlind)
+                    new PokerHandPlayer
+                    {
+                        PlayerId = name,
+                        Position = PositionByButtonOffset[offset],
+                        StartingStackBB = startingStack / bigBlind,
+                    }
                 )
             )
             {
@@ -195,7 +200,7 @@ public partial class GgPokerHandParser : IPokerHandParser
             holeCardsMatch.Groups["first"].Value,
             holeCardsMatch.Groups["second"].Value
         );
-        var events = new List<ParsedHandEvent>();
+        var events = new List<PokerHandEvent>();
 
         foreach (var line in lines)
         {
@@ -208,7 +213,14 @@ public partial class GgPokerHandParser : IPokerHandParser
                 }
 
                 events.Add(
-                    new FlopDealt(ParseCard(cards[0]), ParseCard(cards[1]), ParseCard(cards[2]))
+                    new PokerHandFlopDealtEvent
+                    {
+                        Sequence = events.Count,
+                        Street = PokerStreet.Flop,
+                        First = ParseCard(cards[0]),
+                        Second = ParseCard(cards[1]),
+                        Third = ParseCard(cards[2]),
+                    }
                 );
                 continue;
             }
@@ -221,7 +233,14 @@ public partial class GgPokerHandParser : IPokerHandParser
                     return false;
                 }
 
-                events.Add(new TurnDealt(ParseCard(cards[0])));
+                events.Add(
+                    new PokerHandTurnDealtEvent
+                    {
+                        Sequence = events.Count,
+                        Street = PokerStreet.Turn,
+                        Card = ParseCard(cards[0]),
+                    }
+                );
                 continue;
             }
 
@@ -233,7 +252,14 @@ public partial class GgPokerHandParser : IPokerHandParser
                     return false;
                 }
 
-                events.Add(new RiverDealt(ParseCard(cards[0])));
+                events.Add(
+                    new PokerHandRiverDealtEvent
+                    {
+                        Sequence = events.Count,
+                        Street = PokerStreet.River,
+                        Card = ParseCard(cards[0]),
+                    }
+                );
                 continue;
             }
 
@@ -253,7 +279,14 @@ public partial class GgPokerHandParser : IPokerHandParser
                     return false;
                 }
 
-                events.Add(new UncalledBetReturned(uncalledBet.Groups["player"].Value, amountBB));
+                events.Add(
+                    new PokerHandUncalledBetReturnedEvent
+                    {
+                        Sequence = events.Count,
+                        PlayerId = uncalledBet.Groups["player"].Value,
+                        AmountBB = amountBB,
+                    }
+                );
                 continue;
             }
 
@@ -273,7 +306,14 @@ public partial class GgPokerHandParser : IPokerHandParser
                     return false;
                 }
 
-                events.Add(new PotAwarded(potAward.Groups["player"].Value, amountBB));
+                events.Add(
+                    new PokerHandPotAwardedEvent
+                    {
+                        Sequence = events.Count,
+                        PlayerId = potAward.Groups["player"].Value,
+                        AmountBB = amountBB,
+                    }
+                );
                 continue;
             }
 
@@ -293,7 +333,13 @@ public partial class GgPokerHandParser : IPokerHandParser
                 var totalCashDrop = cashDrop.Sum();
                 if (totalCashDrop > 0)
                 {
-                    events.Add(new CashDrop(totalCashDrop / bigBlind));
+                    events.Add(
+                        new PokerHandCashDropEvent
+                        {
+                            Sequence = events.Count,
+                            AmountBB = totalCashDrop / bigBlind,
+                        }
+                    );
                 }
 
                 continue;
@@ -310,13 +356,15 @@ public partial class GgPokerHandParser : IPokerHandParser
                 }
 
                 events.Add(
-                    new CardsShown(
-                        playerId,
-                        HoleCards.FromCodes(
+                    new PokerHandCardsShownEvent
+                    {
+                        Sequence = events.Count,
+                        PlayerId = playerId,
+                        HoleCards = HoleCards.FromCodes(
                             cardsShown.Groups["first"].Value,
                             cardsShown.Groups["second"].Value
-                        )
-                    )
+                        ),
+                    }
                 );
                 continue;
             }
@@ -346,6 +394,7 @@ public partial class GgPokerHandParser : IPokerHandParser
                     actionMatch.Groups["player"].Value,
                     actionText,
                     bigBlind,
+                    events.Count,
                     out var playerAction
                 )
             )
@@ -357,7 +406,14 @@ public partial class GgPokerHandParser : IPokerHandParser
             events.Add(playerAction);
         }
 
-        hand = new ParsedHand(handHeader.Groups["id"].Value, "Hero", holeCards, players, events);
+        hand = new PokerHand
+        {
+            HandId = handHeader.Groups["id"].Value,
+            HeroPlayerId = "Hero",
+            HeroHoleCards = holeCards,
+            Players = players.Values.ToList(),
+            Events = events,
+        };
         return true;
     }
 
@@ -365,19 +421,20 @@ public partial class GgPokerHandParser : IPokerHandParser
         string playerId,
         string actionText,
         decimal bigBlind,
-        [NotNullWhen(true)] out ParsedHandEvent? handEvent
+        int sequence,
+        [NotNullWhen(true)] out PokerHandEvent? handEvent
     )
     {
         handEvent = null;
         if (actionText.StartsWith("folds", StringComparison.Ordinal))
         {
-            handEvent = new PlayerFoldEvent(playerId);
+            handEvent = new PokerHandPlayerFoldEvent { Sequence = sequence, PlayerId = playerId };
             return true;
         }
 
         if (actionText.StartsWith("checks", StringComparison.Ordinal))
         {
-            handEvent = new PlayerCheckEvent(playerId);
+            handEvent = new PokerHandPlayerCheckEvent { Sequence = sequence, PlayerId = playerId };
             return true;
         }
 
@@ -389,7 +446,13 @@ public partial class GgPokerHandParser : IPokerHandParser
                 return false;
             }
 
-            handEvent = new PostAnte(playerId, amount);
+            handEvent = new PokerHandAntePostEvent
+            {
+                Sequence = sequence,
+                PlayerId = playerId,
+                PostType = PostType.Ante,
+                AmountBB = amount,
+            };
             return true;
         }
 
@@ -407,7 +470,13 @@ public partial class GgPokerHandParser : IPokerHandParser
                 return false;
             }
 
-            handEvent = new PostSmallBlind(playerId, amount);
+            handEvent = new PokerHandSmallBlindPostEvent
+            {
+                Sequence = sequence,
+                PlayerId = playerId,
+                PostType = PostType.SmallBlind,
+                AmountBB = amount,
+            };
             return true;
         }
 
@@ -425,7 +494,13 @@ public partial class GgPokerHandParser : IPokerHandParser
                 return false;
             }
 
-            handEvent = new PostBigBlind(playerId, amount);
+            handEvent = new PokerHandBigBlindPostEvent
+            {
+                Sequence = sequence,
+                PlayerId = playerId,
+                PostType = PostType.BigBlind,
+                AmountBB = amount,
+            };
             return true;
         }
 
@@ -437,7 +512,12 @@ public partial class GgPokerHandParser : IPokerHandParser
                 return false;
             }
 
-            handEvent = new PlayerCallEvent(playerId, amount);
+            handEvent = new PokerHandPlayerCallEvent
+            {
+                Sequence = sequence,
+                PlayerId = playerId,
+                CallAmountBB = amount,
+            };
             return true;
         }
 
@@ -449,7 +529,12 @@ public partial class GgPokerHandParser : IPokerHandParser
                 return false;
             }
 
-            handEvent = new PlayerBetEvent(playerId, amount);
+            handEvent = new PokerHandPlayerBetEvent
+            {
+                Sequence = sequence,
+                PlayerId = playerId,
+                BetAmountBB = amount,
+            };
             return true;
         }
 
@@ -468,14 +553,16 @@ public partial class GgPokerHandParser : IPokerHandParser
                 return false;
             }
 
-            handEvent = new PlayerRaiseEvent(
-                playerId,
-                amount,
-                raiseToAmount,
-                raise
+            handEvent = new PokerHandPlayerRaiseEvent
+            {
+                Sequence = sequence,
+                PlayerId = playerId,
+                RaiseAmountBB = amount,
+                RaiseToAmountBB = raiseToAmount,
+                IsAllIn = raise
                     .Groups["suffix"]
-                    .Value.Contains("is all-in", StringComparison.OrdinalIgnoreCase)
-            );
+                    .Value.Contains("is all-in", StringComparison.OrdinalIgnoreCase),
+            };
             return true;
         }
 

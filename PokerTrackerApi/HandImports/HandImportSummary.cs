@@ -1,4 +1,4 @@
-namespace PokerTrackerApi.HandImport;
+namespace PokerTrackerApi.HandImports;
 
 public record HandImportSummary(
     int FilesReceived,

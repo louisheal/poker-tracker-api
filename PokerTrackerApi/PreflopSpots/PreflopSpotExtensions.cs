@@ -1,28 +1,30 @@
 using PokerTrackerApi.Domain;
-using PokerTrackerApi.Domain.InternalRepresentation;
-using PokerTrackerApi.Domain.InternalRepresentation.Events;
+using PokerTrackerApi.Domain.PokerHand;
+using PokerTrackerApi.Domain.PokerHand.Events;
 
 namespace PokerTrackerApi.PreflopSpots;
 
 public static class PreflopSpotExtensions
 {
-    public static IReadOnlyList<PreflopSpot> ToPreflopSpots(this ParsedHand hand)
+    public static IReadOnlyList<PreflopSpot> ToPreflopSpots(this PokerHand hand)
     {
         ArgumentNullException.ThrowIfNull(hand);
 
-        var heroPosition = hand.Players[hand.HeroPlayerId].Position;
+        var heroPosition = hand
+            .Players.Single(player => player.PlayerId == hand.HeroPlayerId)
+            .Position;
         var handKey = hand.HeroHoleCards.HandKey();
         var actions = new List<ObservedAction>();
         var spots = new List<PreflopSpot>();
 
-        foreach (var handEvent in hand.Events)
+        foreach (var handEvent in hand.Events.OrderBy(handEvent => handEvent.Sequence))
         {
-            if (handEvent is BoardDealt)
+            if (handEvent is PokerHandBoardDealtEvent)
             {
                 break;
             }
 
-            if (handEvent is not PlayerActionEvent playerAction)
+            if (handEvent is not PokerHandPlayerActionEvent playerAction)
             {
                 continue;
             }
@@ -32,7 +34,10 @@ public static class PreflopSpotExtensions
                 break;
             }
 
-            if (!hand.Players.TryGetValue(playerAction.PlayerId, out var player))
+            var player = hand.Players.FirstOrDefault(player =>
+                player.PlayerId == playerAction.PlayerId
+            );
+            if (player is null)
             {
                 break;
             }
@@ -67,7 +72,7 @@ public static class PreflopSpotExtensions
     }
 
     private static bool TryGetAction(
-        PlayerActionEvent playerAction,
+        PokerHandPlayerActionEvent playerAction,
         out PokerAction action,
         out bool isAllIn
     )
@@ -75,13 +80,13 @@ public static class PreflopSpotExtensions
         isAllIn = false;
         switch (playerAction)
         {
-            case PlayerFoldEvent:
+            case PokerHandPlayerFoldEvent:
                 action = PokerAction.Fold;
                 return true;
-            case PlayerCallEvent:
+            case PokerHandPlayerCallEvent:
                 action = PokerAction.Call;
                 return true;
-            case PlayerRaiseEvent raise:
+            case PokerHandPlayerRaiseEvent raise:
                 action = PokerAction.Raise;
                 isAllIn = raise.IsAllIn;
                 return true;

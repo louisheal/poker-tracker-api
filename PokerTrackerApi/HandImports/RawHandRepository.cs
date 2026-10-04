@@ -2,15 +2,10 @@ using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.Persistence;
 
-namespace PokerTrackerApi.HandImport;
+namespace PokerTrackerApi.HandImports;
 
 public interface IRawHandRepository
 {
-    Task<bool> TryAddRawHandAsync(
-        string handId,
-        string rawText,
-        CancellationToken cancellationToken
-    );
     IAsyncEnumerable<IReadOnlyList<RawHand>> GetRawHandsBatchedAsync(
         CancellationToken cancellationToken
     );
@@ -23,21 +18,6 @@ public class RawHandRepository : IRawHandRepository
     public RawHandRepository(PokerTrackerDbContext dbContext)
     {
         _dbContext = dbContext;
-    }
-
-    public async Task<bool> TryAddRawHandAsync(
-        string handId,
-        string rawText,
-        CancellationToken cancellationToken
-    )
-    {
-        if (await _dbContext.RawHands.AnyAsync(hand => hand.HandId == handId, cancellationToken))
-        {
-            return false;
-        }
-
-        _dbContext.RawHands.Add(new RawHand { HandId = handId, RawText = rawText });
-        return true;
     }
 
     public async IAsyncEnumerable<IReadOnlyList<RawHand>> GetRawHandsBatchedAsync(

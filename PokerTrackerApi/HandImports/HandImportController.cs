@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace PokerTrackerApi.HandImport;
+namespace PokerTrackerApi.HandImports;
 
 [ApiController]
 [Route("api/imports")]

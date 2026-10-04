@@ -1,0 +1,46 @@
+using Microsoft.EntityFrameworkCore;
+using PokerTrackerApi.Domain.PokerHand;
+using PokerTrackerApi.Persistence;
+
+namespace PokerTrackerApi.HandImports;
+
+public interface IHandImportRepository
+{
+    Task<bool> TryAddHandAsync(
+        PokerHand pokerHand,
+        string rawText,
+        CancellationToken cancellationToken
+    );
+}
+
+public class HandImportRepository : IHandImportRepository
+{
+    private readonly PokerTrackerDbContext _dbContext;
+
+    public HandImportRepository(PokerTrackerDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public async Task<bool> TryAddHandAsync(
+        PokerHand pokerHand,
+        string rawText,
+        CancellationToken cancellationToken
+    )
+    {
+        if (
+            _dbContext.RawHands.Local.Any(hand => hand.HandId == pokerHand.HandId)
+            || await _dbContext.RawHands.AnyAsync(
+                hand => hand.HandId == pokerHand.HandId,
+                cancellationToken
+            )
+        )
+        {
+            return false;
+        }
+
+        _dbContext.RawHands.Add(new RawHand { HandId = pokerHand.HandId, RawText = rawText });
+        _dbContext.PokerHands.Add(pokerHand);
+        return true;
+    }
+}

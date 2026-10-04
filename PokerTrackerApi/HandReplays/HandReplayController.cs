@@ -7,26 +7,24 @@ namespace PokerTrackerApi.HandReplays;
 public class HandReplayController : ControllerBase
 {
     private readonly IHandReplayRepository _repository;
-    private readonly IHandReplayMapper _mapper;
 
-    public HandReplayController(IHandReplayRepository repository, IHandReplayMapper mapper)
+    public HandReplayController(IHandReplayRepository repository)
     {
         _repository = repository;
-        _mapper = mapper;
     }
 
     [HttpGet("{handId}")]
-    public async Task<ActionResult<HandReplayDto>> GetHandReplay(
+    public async Task<ActionResult<HandReplay>> GetHandReplay(
         string handId,
         CancellationToken cancellationToken
     )
     {
-        var replay = await _repository.GetHandReplayAsync(handId, cancellationToken);
-        if (replay is null)
+        var replayDto = await _repository.GetHandReplayAsync(handId, cancellationToken);
+        if (replayDto is null)
         {
             return NotFound();
         }
 
-        return Ok(_mapper.Map(replay));
+        return Ok(replayDto);
     }
 }

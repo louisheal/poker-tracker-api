@@ -1,7 +1,5 @@
-using PokerTrackerApi.HandHistories;
-using PokerTrackerApi.HandImport;
+using PokerTrackerApi.HandImports;
 using PokerTrackerApi.HandParsing;
-using PokerTrackerApi.HandReplays;
 using PokerTrackerApi.Persistence;
 using PokerTrackerApi.PreflopSpots;
 
@@ -16,8 +14,6 @@ public class HandReprocessingService : IHandReprocessingService
 {
     private readonly IPokerHandParser _parser;
     private readonly IRawHandRepository _rawHandRepository;
-    private readonly IHandHistorySummaryRepository _handHistorySummaryRepository;
-    private readonly IHandReplayRepository _handReplayRepository;
     private readonly IPreflopSpotRepository _preflopSpotRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<IHandReprocessingService> _logger;
@@ -25,8 +21,6 @@ public class HandReprocessingService : IHandReprocessingService
     public HandReprocessingService(
         IPokerHandParser parser,
         IRawHandRepository rawHandRepository,
-        IHandHistorySummaryRepository handHistorySummaryRepository,
-        IHandReplayRepository handReplayRepository,
         IPreflopSpotRepository preflopSpotRepository,
         IUnitOfWork unitOfWork,
         ILogger<IHandReprocessingService> logger
@@ -34,8 +28,6 @@ public class HandReprocessingService : IHandReprocessingService
     {
         _parser = parser;
         _rawHandRepository = rawHandRepository;
-        _handHistorySummaryRepository = handHistorySummaryRepository;
-        _handReplayRepository = handReplayRepository;
         _preflopSpotRepository = preflopSpotRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -80,14 +72,6 @@ public class HandReprocessingService : IHandReprocessingService
                     continue;
                 }
 
-                await _handHistorySummaryRepository.UpsertHandHistorySummary(
-                    hand.ToHandHistorySummary(),
-                    cancellationToken
-                );
-                await _handReplayRepository.UpsertHandReplay(
-                    hand.ToHandReplay(),
-                    cancellationToken
-                );
                 await _preflopSpotRepository.ReplacePreflopSpots(
                     hand.HandId,
                     hand.ToPreflopSpots(),

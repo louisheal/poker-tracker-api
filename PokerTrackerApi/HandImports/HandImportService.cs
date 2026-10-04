@@ -1,11 +1,9 @@
-using PokerTrackerApi.HandHistories;
 using PokerTrackerApi.HandImport.HandReaders;
 using PokerTrackerApi.HandParsing;
-using PokerTrackerApi.HandReplays;
 using PokerTrackerApi.Persistence;
 using PokerTrackerApi.PreflopSpots;
 
-namespace PokerTrackerApi.HandImport;
+namespace PokerTrackerApi.HandImports;
 
 public interface IHandImportService
 {
@@ -18,30 +16,24 @@ public interface IHandImportService
 public class HandImportService : IHandImportService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IRawHandRepository _repository;
-    private readonly IPreflopSpotRepository _preflopRepository;
-    private readonly IHandHistorySummaryRepository _handHistorySummaryRepository;
-    private readonly IHandReplayRepository _handReplayRepository;
+    private readonly IHandImportRepository _repository;
+    private readonly IPreflopSpotRepository _preflopSpotRepository;
     private readonly IPokerHandParser _parser;
     private readonly IPokerHandReader _reader;
     private readonly ILogger<HandImportService> _logger;
 
     public HandImportService(
         IUnitOfWork unitOfWork,
-        IRawHandRepository handHistoryRepository,
-        IPreflopSpotRepository preflopRepository,
-        IHandHistorySummaryRepository handHistorySummaryRepository,
-        IHandReplayRepository handReplayRepository,
+        IHandImportRepository handImportRepository,
+        IPreflopSpotRepository preflopSpotRepository,
         IPokerHandParser parser,
         IPokerHandReader reader,
         ILogger<HandImportService> logger
     )
     {
         _unitOfWork = unitOfWork;
-        _repository = handHistoryRepository;
-        _preflopRepository = preflopRepository;
-        _handHistorySummaryRepository = handHistorySummaryRepository;
-        _handReplayRepository = handReplayRepository;
+        _repository = handImportRepository;
+        _preflopSpotRepository = preflopSpotRepository;
         _parser = parser;
         _logger = logger;
         _reader = reader;
@@ -85,16 +77,13 @@ public class HandImportService : IHandImportService
                     ?? throw new InvalidOperationException(
                         "A successful parse result must contain a parsed hand."
                     );
-                if (!await _repository.TryAddRawHandAsync(hand.HandId, rawHand, cancellationToken))
+                if (!await _repository.TryAddHandAsync(hand, rawHand, cancellationToken))
                 {
                     duplicateHands++;
                     continue;
                 }
 
-                _preflopRepository.AddPreflopSpots(hand.ToPreflopSpots());
-                _handHistorySummaryRepository.AddHandHistorySummary(hand.ToHandHistorySummary());
-                _handReplayRepository.AddHandReplay(hand.ToHandReplay());
-
+                _preflopSpotRepository.AddPreflopSpots(hand.ToPreflopSpots());
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 savedHands++;
             }

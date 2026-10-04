@@ -2,7 +2,7 @@ using PokerTrackerApi.Contract;
 
 namespace PokerTrackerApi.HandReplays;
 
-public record HandReplaySpotDto(
+public record HandReplaySpot(
     decimal PotBB,
     IReadOnlyList<string> ActivePlayers,
     string? NextToAct,
