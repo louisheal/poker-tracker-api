@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.Domain.PokerHand;
 using PokerTrackerApi.Domain.PokerHand.Events;
 using PokerTrackerApi.HandImporting;
+using PokerTrackerApi.HandNotes;
 using PokerTrackerApi.PreflopSpots;
 
 namespace PokerTrackerApi.Persistence;
@@ -20,6 +21,10 @@ public class PokerTrackerDbContext : DbContext
     public DbSet<PokerHandEvent> PokerHandEvents => Set<PokerHandEvent>();
 
     public DbSet<PreflopSpot> PreflopSpots => Set<PreflopSpot>();
+
+    public DbSet<HandLabelAssignment> HandLabelAssignments => Set<HandLabelAssignment>();
+
+    public DbSet<HandNote> HandNotes => Set<HandNote>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -166,6 +171,40 @@ public class PokerTrackerDbContext : DbContext
                 .HasOne<RawHand>()
                 .WithMany()
                 .HasForeignKey(spot => spot.HandId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HandLabelAssignment>(entity =>
+        {
+            entity.HasKey(assignment => new
+            {
+                assignment.HandId,
+                assignment.Street,
+                assignment.Label,
+            });
+            entity.Property(assignment => assignment.HandId).HasMaxLength(32);
+            entity
+                .Property(assignment => assignment.Street)
+                .HasConversion<string>()
+                .HasMaxLength(16);
+            entity.Property(assignment => assignment.Label).HasMaxLength(64);
+            entity.HasIndex(assignment => new { assignment.Label, assignment.HandId });
+            entity
+                .HasOne<Domain.PokerHand.PokerHand>()
+                .WithMany()
+                .HasForeignKey(assignment => assignment.HandId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HandNote>(entity =>
+        {
+            entity.HasKey(note => note.HandId);
+            entity.Property(note => note.HandId).HasMaxLength(32);
+            entity.Property(note => note.Note).HasColumnType("longtext").IsRequired();
+            entity
+                .HasOne<RawHand>()
+                .WithMany()
+                .HasForeignKey(note => note.HandId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

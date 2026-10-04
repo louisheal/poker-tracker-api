@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PokerTrackerApi.Persistence;
 
@@ -11,9 +12,11 @@ using PokerTrackerApi.Persistence;
 namespace PokerTrackerApi.Persistence.Migrations
 {
     [DbContext(typeof(PokerTrackerDbContext))]
-    partial class PokerTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261004192139_ScopeHandLabelsByStreet")]
+    partial class ScopeHandLabelsByStreet
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -143,21 +146,6 @@ namespace PokerTrackerApi.Persistence.Migrations
                     b.HasIndex("Label", "HandId");
 
                     b.ToTable("HandLabelAssignments");
-                });
-
-            modelBuilder.Entity("PokerTrackerApi.HandNotes.HandNote", b =>
-                {
-                    b.Property<string>("HandId")
-                        .HasMaxLength(32)
-                        .HasColumnType("varchar(32)");
-
-                    b.Property<string>("Note")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("HandId");
-
-                    b.ToTable("HandNotes");
                 });
 
             modelBuilder.Entity("PokerTrackerApi.PreflopSpots.PreflopSpot", b =>
@@ -577,15 +565,6 @@ namespace PokerTrackerApi.Persistence.Migrations
             modelBuilder.Entity("PokerTrackerApi.HandNotes.HandLabelAssignment", b =>
                 {
                     b.HasOne("PokerTrackerApi.Domain.PokerHand.PokerHand", null)
-                        .WithMany()
-                        .HasForeignKey("HandId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("PokerTrackerApi.HandNotes.HandNote", b =>
-                {
-                    b.HasOne("PokerTrackerApi.HandImporting.RawHand", null)
                         .WithMany()
                         .HasForeignKey("HandId")
                         .OnDelete(DeleteBehavior.Cascade)

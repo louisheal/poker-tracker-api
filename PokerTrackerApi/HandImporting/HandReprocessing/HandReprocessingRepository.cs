@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.Domain.PokerHand;
+using PokerTrackerApi.HandNotes;
 using PokerTrackerApi.Persistence;
 using PokerTrackerApi.PreflopSpots;
 
@@ -70,6 +71,10 @@ public class HandReprocessingRepository : IHandReprocessingRepository
         );
         try
         {
+            var existingLabels = await _dbContext
+                .HandLabelAssignments.AsNoTracking()
+                .Where(assignment => handIds.Contains(assignment.HandId))
+                .ToArrayAsync(cancellationToken);
             await _dbContext
                 .PreflopSpots.Where(spot => handIds.Contains(spot.HandId))
                 .ExecuteDeleteAsync(cancellationToken);
@@ -79,6 +84,14 @@ public class HandReprocessingRepository : IHandReprocessingRepository
 
             _dbContext.PokerHands.AddRange(pokerHands);
             _dbContext.PreflopSpots.AddRange(preflopSpots);
+            _dbContext.HandLabelAssignments.AddRange(
+                existingLabels.Select(assignment => new HandLabelAssignment
+                {
+                    HandId = assignment.HandId,
+                    Street = assignment.Street,
+                    Label = assignment.Label,
+                })
+            );
             await _dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
