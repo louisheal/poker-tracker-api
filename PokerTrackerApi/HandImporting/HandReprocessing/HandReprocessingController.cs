@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace PokerTrackerApi.HandReprocessing;
+namespace PokerTrackerApi.HandImporting.HandReprocessing;
 
 [ApiController]
 [Route("api/handreprocessing")]

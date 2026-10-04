@@ -5,7 +5,7 @@ using PokerTrackerApi.Domain;
 using PokerTrackerApi.Domain.PokerHand;
 using PokerTrackerApi.Domain.PokerHand.Events;
 
-namespace PokerTrackerApi.HandParsing;
+namespace PokerTrackerApi.HandImporting.HandParsers;
 
 public partial class GgPokerHandParser : IPokerHandParser
 {

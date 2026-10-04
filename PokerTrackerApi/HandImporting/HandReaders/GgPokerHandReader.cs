@@ -1,8 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace PokerTrackerApi.HandImport.HandReaders;
+namespace PokerTrackerApi.HandImporting.HandReaders;
 
 public class GgPokerHandReader : IPokerHandReader
 {

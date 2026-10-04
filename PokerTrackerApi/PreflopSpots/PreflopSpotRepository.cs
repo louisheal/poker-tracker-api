@@ -6,12 +6,6 @@ namespace PokerTrackerApi.PreflopSpots;
 
 public interface IPreflopSpotRepository
 {
-    void AddPreflopSpots(IReadOnlyList<PreflopSpot> spots);
-    Task ReplacePreflopSpots(
-        string handId,
-        IReadOnlyList<PreflopSpot> spots,
-        CancellationToken cancellationToken
-    );
     Task<RangeActionsDto> GetRangeAsync(string spotKey, CancellationToken cancellationToken);
 }
 
@@ -22,24 +16,6 @@ public class PreflopSpotRepository : IPreflopSpotRepository
     public PreflopSpotRepository(PokerTrackerDbContext dbContext)
     {
         _dbContext = dbContext;
-    }
-
-    public void AddPreflopSpots(IReadOnlyList<PreflopSpot> spots) =>
-        _dbContext.PreflopSpots.AddRange(spots);
-
-    public async Task ReplacePreflopSpots(
-        string handId,
-        IReadOnlyList<PreflopSpot> spots,
-        CancellationToken cancellationToken
-    )
-    {
-        var existing = await _dbContext
-            .PreflopSpots.Where(spot => spot.HandId == handId)
-            .ToListAsync(cancellationToken);
-
-        _dbContext.PreflopSpots.RemoveRange(existing);
-
-        _dbContext.PreflopSpots.AddRange(spots);
     }
 
     public async Task<RangeActionsDto> GetRangeAsync(

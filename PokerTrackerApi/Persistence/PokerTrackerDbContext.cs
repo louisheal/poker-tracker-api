@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.Domain.PokerHand;
 using PokerTrackerApi.Domain.PokerHand.Events;
-using PokerTrackerApi.HandImports;
+using PokerTrackerApi.HandImporting;
 using PokerTrackerApi.PreflopSpots;
 
 namespace PokerTrackerApi.Persistence;

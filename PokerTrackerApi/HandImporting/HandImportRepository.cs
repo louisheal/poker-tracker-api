@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.Domain.PokerHand;
 using PokerTrackerApi.Persistence;
+using PokerTrackerApi.PreflopSpots;
 
-namespace PokerTrackerApi.HandImports;
+namespace PokerTrackerApi.HandImporting;
 
 public interface IHandImportRepository
 {
@@ -41,6 +42,16 @@ public class HandImportRepository : IHandImportRepository
 
         _dbContext.RawHands.Add(new RawHand { HandId = pokerHand.HandId, RawText = rawText });
         _dbContext.PokerHands.Add(pokerHand);
+        _dbContext.PreflopSpots.AddRange(pokerHand.ToPreflopSpots());
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            _dbContext.ChangeTracker.Clear();
+        }
+
         return true;
     }
 }

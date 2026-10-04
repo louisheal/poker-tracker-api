@@ -1,9 +1,7 @@
-using PokerTrackerApi.HandImports;
-using PokerTrackerApi.HandParsing;
-using PokerTrackerApi.Persistence;
-using PokerTrackerApi.PreflopSpots;
+using PokerTrackerApi.Domain.PokerHand;
+using PokerTrackerApi.HandImporting.HandParsers;
 
-namespace PokerTrackerApi.HandReprocessing;
+namespace PokerTrackerApi.HandImporting.HandReprocessing;
 
 public interface IHandReprocessingService
 {
@@ -13,30 +11,27 @@ public interface IHandReprocessingService
 public class HandReprocessingService : IHandReprocessingService
 {
     private readonly IPokerHandParser _parser;
-    private readonly IRawHandRepository _rawHandRepository;
-    private readonly IPreflopSpotRepository _preflopSpotRepository;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IHandReprocessingRepository _reprocessingRepository;
     private readonly ILogger<IHandReprocessingService> _logger;
 
     public HandReprocessingService(
         IPokerHandParser parser,
-        IRawHandRepository rawHandRepository,
-        IPreflopSpotRepository preflopSpotRepository,
-        IUnitOfWork unitOfWork,
+        IHandReprocessingRepository reprocessingRepository,
         ILogger<IHandReprocessingService> logger
     )
     {
         _parser = parser;
-        _rawHandRepository = rawHandRepository;
-        _preflopSpotRepository = preflopSpotRepository;
-        _unitOfWork = unitOfWork;
+        _reprocessingRepository = reprocessingRepository;
         _logger = logger;
     }
 
     public async Task ReprocessRawHands(CancellationToken cancellationToken)
     {
-        await foreach (var batch in _rawHandRepository.GetRawHandsBatchedAsync(cancellationToken))
+        await foreach (
+            var batch in _reprocessingRepository.GetRawHandsBatchedAsync(cancellationToken)
+        )
         {
+            var parsedHands = new List<PokerHand>(batch.Count);
             foreach (var rawHand in batch)
             {
                 var parseResult = _parser.ParseHand(rawHand.RawText);
@@ -72,15 +67,10 @@ public class HandReprocessingService : IHandReprocessingService
                     continue;
                 }
 
-                await _preflopSpotRepository.ReplacePreflopSpots(
-                    hand.HandId,
-                    hand.ToPreflopSpots(),
-                    cancellationToken
-                );
+                parsedHands.Add(hand);
             }
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            _unitOfWork.ClearTracking();
+            await _reprocessingRepository.UpsertPokerHandsAsync(parsedHands, cancellationToken);
         }
     }
 }

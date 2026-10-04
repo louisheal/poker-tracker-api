@@ -1,9 +1,7 @@
-using PokerTrackerApi.HandImport.HandReaders;
-using PokerTrackerApi.HandParsing;
-using PokerTrackerApi.Persistence;
-using PokerTrackerApi.PreflopSpots;
+using PokerTrackerApi.HandImporting.HandParsers;
+using PokerTrackerApi.HandImporting.HandReaders;
 
-namespace PokerTrackerApi.HandImports;
+namespace PokerTrackerApi.HandImporting;
 
 public interface IHandImportService
 {
@@ -15,25 +13,19 @@ public interface IHandImportService
 
 public class HandImportService : IHandImportService
 {
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IHandImportRepository _repository;
-    private readonly IPreflopSpotRepository _preflopSpotRepository;
     private readonly IPokerHandParser _parser;
     private readonly IPokerHandReader _reader;
     private readonly ILogger<HandImportService> _logger;
 
     public HandImportService(
-        IUnitOfWork unitOfWork,
         IHandImportRepository handImportRepository,
-        IPreflopSpotRepository preflopSpotRepository,
         IPokerHandParser parser,
         IPokerHandReader reader,
         ILogger<HandImportService> logger
     )
     {
-        _unitOfWork = unitOfWork;
         _repository = handImportRepository;
-        _preflopSpotRepository = preflopSpotRepository;
         _parser = parser;
         _logger = logger;
         _reader = reader;
@@ -83,8 +75,6 @@ public class HandImportService : IHandImportService
                     continue;
                 }
 
-                _preflopSpotRepository.AddPreflopSpots(hand.ToPreflopSpots());
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
                 savedHands++;
             }
         }
