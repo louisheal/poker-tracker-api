@@ -78,7 +78,7 @@ public class HandHistoryRepository : IHandHistoryRepository
         }
 
         var pokerHands = await pokerHandsQuery
-            .OrderBy(hand => hand.HandId)
+            .OrderByDescending(hand => hand.Timestamp)
             .Take(MaxHandHistorySummaries)
             .ToArrayAsync(cancellationToken);
 

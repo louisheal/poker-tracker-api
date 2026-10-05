@@ -19,7 +19,9 @@ public partial class GgPokerHandParser : IPokerHandParser
         PokerPosition.CO,
     ];
 
-    [GeneratedRegex(@"^Poker Hand #(?<id>[^:]+):.*$")]
+    [GeneratedRegex(
+        @"^Poker Hand #(?<id>[^:]+):.* - (?<timestamp>[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2})$"
+    )]
     private static partial Regex HandHeaderRegex();
 
     [GeneratedRegex(
@@ -113,7 +115,21 @@ public partial class GgPokerHandParser : IPokerHandParser
         var blindLine = BlindLineRegex().Match(lines[0]);
         if (
             !handHeader.Success
-            || !blindLine.Success
+            || !DateTimeOffset.TryParseExact(
+                handHeader.Groups["timestamp"].Value,
+                "yyyy/MM/dd HH:mm:ss",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal,
+                out var timestamp
+            )
+        )
+        {
+            error = "The hand header or timestamp is invalid.";
+            return false;
+        }
+
+        if (
+            !blindLine.Success
             || !TryParseCashAmount(blindLine.Groups["smallBlind"].Value, out var smallBlind)
             || !TryParseCashAmount(blindLine.Groups["bigBlind"].Value, out var bigBlind)
             || bigBlind <= 0
@@ -409,6 +425,7 @@ public partial class GgPokerHandParser : IPokerHandParser
         hand = new PokerHand
         {
             HandId = handHeader.Groups["id"].Value,
+            Timestamp = timestamp,
             HeroPlayerId = "Hero",
             HeroHoleCards = holeCards,
             Players = players.Values.ToList(),

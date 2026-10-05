@@ -73,13 +73,13 @@ public class HandReprocessingRepository : IHandReprocessingRepository
         {
             var existingLabels = await _dbContext
                 .HandLabelAssignments.AsNoTracking()
-                .Where(assignment => handIds.Contains(assignment.HandId))
+                .Where(assignment => Enumerable.Contains(handIds, assignment.HandId))
                 .ToArrayAsync(cancellationToken);
             await _dbContext
-                .PreflopSpots.Where(spot => handIds.Contains(spot.HandId))
+                .PreflopSpots.Where(spot => Enumerable.Contains(handIds, spot.HandId))
                 .ExecuteDeleteAsync(cancellationToken);
             await _dbContext
-                .PokerHands.Where(hand => handIds.Contains(hand.HandId))
+                .PokerHands.Where(hand => Enumerable.Contains(handIds, hand.HandId))
                 .ExecuteDeleteAsync(cancellationToken);
 
             _dbContext.PokerHands.AddRange(pokerHands);

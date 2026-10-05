@@ -9,4 +9,5 @@ public class PokerHand
     public required HoleCards HeroHoleCards { get; init; }
     public ICollection<PokerHandPlayer> Players { get; set; } = new List<PokerHandPlayer>();
     public ICollection<PokerHandEvent> Events { get; init; } = new List<PokerHandEvent>();
+    public DateTimeOffset Timestamp { get; init; }
 }
