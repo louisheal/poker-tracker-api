@@ -2,15 +2,15 @@ using Microsoft.AspNetCore.Mvc;
 using PokerTrackerApi.Domain;
 using PokerTrackerApi.HandHistories;
 
-namespace PokerTrackerApi.HandNotes;
+namespace PokerTrackerApi.HandAnnotations;
 
 [ApiController]
-[Route("api/handnotes")]
-public class HandNotesController : ControllerBase
+[Route("api/handannotations")]
+public class HandAnnotationsController : ControllerBase
 {
-    private readonly IHandNotesRepository _repository;
+    private readonly IHandAnnotationsRepository _repository;
 
-    public HandNotesController(IHandNotesRepository repository)
+    public HandAnnotationsController(IHandAnnotationsRepository repository)
     {
         _repository = repository;
     }
@@ -32,6 +32,22 @@ public class HandNotesController : ControllerBase
 
         await _repository.ReplaceNoteAsync(handId, request.Note, cancellationToken);
         return Ok(request.Note);
+    }
+
+    [HttpPut("{handId}/flagged")]
+    public async Task<ActionResult<bool>> SetFlagged(
+        string handId,
+        UpdateHandFlaggedRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!await _repository.HandExistsAsync(handId, cancellationToken))
+        {
+            return NotFound();
+        }
+
+        await _repository.SetFlaggedAsync(handId, request.Flagged, cancellationToken);
+        return Ok(request.Flagged);
     }
 
     [HttpPut("{handId}/labels")]
@@ -92,3 +108,5 @@ public class HandNotesController : ControllerBase
 public record UpdateHandLabelsRequest(Dictionary<string, string[]> LabelsByStreet);
 
 public record UpdateHandNoteRequest(string Note);
+
+public record UpdateHandFlaggedRequest(bool Flagged);

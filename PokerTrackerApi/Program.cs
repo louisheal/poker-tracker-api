@@ -1,22 +1,28 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using PokerTrackerApi.Diagnostics;
+using PokerTrackerApi.HandAnnotations;
 using PokerTrackerApi.HandHistories;
 using PokerTrackerApi.HandImporting;
 using PokerTrackerApi.HandImporting.HandParsers;
 using PokerTrackerApi.HandImporting.HandReaders;
 using PokerTrackerApi.HandImporting.HandReprocessing;
-using PokerTrackerApi.HandNotes;
 using PokerTrackerApi.HandReplays;
+using PokerTrackerApi.Metrics;
 using PokerTrackerApi.Persistence;
 using PokerTrackerApi.PreflopSpots;
+using PokerTrackerApi.Winrate;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<IHandHistoryRepository, HandHistoryRepository>();
+builder.Services.AddScoped<IWinrateRepository, WinrateRepository>();
+builder.Services.AddScoped<IMetricsRepository, MetricsRepository>();
+builder.Services.AddScoped<IRiverDiagnosticsRepository, RiverDiagnosticsRepository>();
 builder.Services.AddScoped<IHandReplayRepository, HandReplayRepository>();
-builder.Services.AddScoped<IHandNotesRepository, HandNotesRepository>();
+builder.Services.AddScoped<IHandAnnotationsRepository, HandAnnotationsRepository>();
 builder.Services.AddScoped<IPreflopSpotRepository, PreflopSpotRepository>();
 builder.Services.AddScoped<IHandReprocessingRepository, HandReprocessingRepository>();
 builder.Services.AddScoped<IHandImportRepository, HandImportRepository>();

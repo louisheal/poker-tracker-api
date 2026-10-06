@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using PokerTrackerApi.HandNotes;
+using PokerTrackerApi.HandAnnotations;
 
 namespace PokerTrackerApi.HandHistories;
 
@@ -21,7 +21,8 @@ public class HandHistoryController : ControllerBase
         CancellationToken cancellationToken,
         bool? heroSawFlop = null,
         [FromQuery] string[]? labels = null,
-        bool includeUnlabelled = false
+        bool includeUnlabelled = false,
+        bool flaggedOnly = false
     )
     {
         if (labels?.Any(label => !HandLabelCatalog.Contains(label)) == true)
@@ -33,7 +34,8 @@ public class HandHistoryController : ControllerBase
             cancellationToken,
             heroSawFlop,
             labels,
-            includeUnlabelled
+            includeUnlabelled,
+            flaggedOnly
         );
         return Ok(
             handHistories
@@ -48,9 +50,37 @@ public class HandHistoryController : ControllerBase
                                 label.Label
                             ))
                             .ToArray(),
-                        hand.Note
+                        hand.Note,
+                        hand.Flagged
                     );
                 })
+                .ToArray()
+        );
+    }
+
+    [HttpPost("by-ids")]
+    public async Task<ActionResult<HandHistoryDto[]>> GetHandHistoriesByIds(
+        [FromBody] string[] handIds,
+        CancellationToken cancellationToken
+    )
+    {
+        var handHistories = await _repository.GetHandHistoriesByIdsAsync(
+            handIds,
+            cancellationToken
+        );
+        return Ok(
+            handHistories
+                .Select(hand => new HandHistoryDto(
+                    hand.HandId,
+                    _mapper.Map(hand.HeroHoleCards),
+                    hand.Labels.Select(label => new HandLabelDto(
+                            label.Street.ToString(),
+                            label.Label
+                        ))
+                        .ToArray(),
+                    hand.Note,
+                    hand.Flagged
+                ))
                 .ToArray()
         );
     }

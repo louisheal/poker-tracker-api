@@ -6,7 +6,8 @@ public record HandHistoryDto(
     string HandId,
     HoleCardsDto HoleCards,
     HandLabelDto[] Labels,
-    string Note
+    string Note,
+    bool Flagged
 );
 
 public record HandLabelDto(string Street, string Label);

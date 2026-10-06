@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.Domain.PokerHand;
 using PokerTrackerApi.Domain.PokerHand.Events;
+using PokerTrackerApi.HandAnnotations;
 using PokerTrackerApi.HandImporting;
-using PokerTrackerApi.HandNotes;
 using PokerTrackerApi.PreflopSpots;
 
 namespace PokerTrackerApi.Persistence;
@@ -24,7 +24,7 @@ public class PokerTrackerDbContext : DbContext
 
     public DbSet<HandLabelAssignment> HandLabelAssignments => Set<HandLabelAssignment>();
 
-    public DbSet<HandNote> HandNotes => Set<HandNote>();
+    public DbSet<HandAnnotation> HandAnnotations => Set<HandAnnotation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -196,15 +196,16 @@ public class PokerTrackerDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<HandNote>(entity =>
+        modelBuilder.Entity<HandAnnotation>(entity =>
         {
-            entity.HasKey(note => note.HandId);
-            entity.Property(note => note.HandId).HasMaxLength(32);
-            entity.Property(note => note.Note).HasColumnType("longtext").IsRequired();
+            entity.HasKey(annotation => annotation.HandId);
+            entity.Property(annotation => annotation.HandId).HasMaxLength(32);
+            entity.Property(annotation => annotation.Note).HasColumnType("longtext").IsRequired();
+            entity.Property(annotation => annotation.Flagged).HasDefaultValue(false);
             entity
                 .HasOne<RawHand>()
                 .WithMany()
-                .HasForeignKey(note => note.HandId)
+                .HasForeignKey(annotation => annotation.HandId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.Domain.PokerHand;
-using PokerTrackerApi.HandNotes;
+using PokerTrackerApi.HandAnnotations;
 using PokerTrackerApi.Persistence;
 using PokerTrackerApi.PreflopSpots;
 

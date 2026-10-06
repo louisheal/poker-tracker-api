@@ -1,12 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.Persistence;
 
-namespace PokerTrackerApi.HandNotes;
+namespace PokerTrackerApi.HandAnnotations;
 
-public interface IHandNotesRepository
+public interface IHandAnnotationsRepository
 {
     Task<bool> HandExistsAsync(string handId, CancellationToken cancellationToken);
     Task ReplaceNoteAsync(string handId, string note, CancellationToken cancellationToken);
+    Task SetFlaggedAsync(string handId, bool flagged, CancellationToken cancellationToken);
     Task ReplaceLabelsAsync(
         string handId,
         IReadOnlyCollection<HandLabelAssignment> assignments,
@@ -14,11 +15,11 @@ public interface IHandNotesRepository
     );
 }
 
-public class HandNotesRepository : IHandNotesRepository
+public class HandAnnotationsRepository : IHandAnnotationsRepository
 {
     private readonly PokerTrackerDbContext _dbContext;
 
-    public HandNotesRepository(PokerTrackerDbContext dbContext)
+    public HandAnnotationsRepository(PokerTrackerDbContext dbContext)
     {
         _dbContext = dbContext;
     }
@@ -35,21 +36,50 @@ public class HandNotesRepository : IHandNotesRepository
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(
             cancellationToken
         );
-        var existingNote = await _dbContext.HandNotes.SingleOrDefaultAsync(
-            handNote => handNote.HandId == handId,
+        var existingAnnotation = await _dbContext.HandAnnotations.SingleOrDefaultAsync(
+            annotation => annotation.HandId == handId,
             cancellationToken
         );
-        if (existingNote is null)
+        if (existingAnnotation is null)
         {
-            _dbContext.HandNotes.Add(new HandNote { HandId = handId, Note = note });
+            _dbContext.HandAnnotations.Add(new HandAnnotation { HandId = handId, Note = note });
         }
         else
         {
-            existingNote.Note = note;
+            existingAnnotation.Note = note;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+    }
+
+    public async Task SetFlaggedAsync(
+        string handId,
+        bool flagged,
+        CancellationToken cancellationToken
+    )
+    {
+        var annotation = await _dbContext.HandAnnotations.SingleOrDefaultAsync(
+            item => item.HandId == handId,
+            cancellationToken
+        );
+        if (annotation is null)
+        {
+            _dbContext.HandAnnotations.Add(
+                new HandAnnotation
+                {
+                    HandId = handId,
+                    Note = string.Empty,
+                    Flagged = flagged,
+                }
+            );
+        }
+        else
+        {
+            annotation.Flagged = flagged;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task ReplaceLabelsAsync(

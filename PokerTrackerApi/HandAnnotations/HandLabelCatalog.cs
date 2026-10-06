@@ -1,4 +1,4 @@
-namespace PokerTrackerApi.HandNotes;
+namespace PokerTrackerApi.HandAnnotations;
 
 public record HandLabelOption(string Value, string Name, string Category);
 

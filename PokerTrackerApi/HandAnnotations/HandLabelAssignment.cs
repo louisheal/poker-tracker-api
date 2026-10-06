@@ -1,6 +1,6 @@
 using PokerTrackerApi.Domain;
 
-namespace PokerTrackerApi.HandNotes;
+namespace PokerTrackerApi.HandAnnotations;
 
 public class HandLabelAssignment
 {
