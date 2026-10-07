@@ -6,3 +6,5 @@ public record HandImportSummary(
     int DuplicateHands,
     int InvalidHands
 );
+
+public record HandImportFileSummary(int HandsSaved, int DuplicateHands, int InvalidHands);

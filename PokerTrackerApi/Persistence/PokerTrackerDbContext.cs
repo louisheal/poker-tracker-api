@@ -3,6 +3,7 @@ using PokerTrackerApi.Domain.PokerHand;
 using PokerTrackerApi.Domain.PokerHand.Events;
 using PokerTrackerApi.HandAnnotations;
 using PokerTrackerApi.HandImporting;
+using PokerTrackerApi.HandImporting.Jobs;
 using PokerTrackerApi.PreflopSpots;
 
 namespace PokerTrackerApi.Persistence;
@@ -25,6 +26,10 @@ public class PokerTrackerDbContext : DbContext
     public DbSet<HandLabelAssignment> HandLabelAssignments => Set<HandLabelAssignment>();
 
     public DbSet<HandAnnotation> HandAnnotations => Set<HandAnnotation>();
+
+    public DbSet<HandImportJob> HandImportJobs => Set<HandImportJob>();
+
+    public DbSet<HandImportJobFile> HandImportJobFiles => Set<HandImportJobFile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -207,6 +212,29 @@ public class PokerTrackerDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(annotation => annotation.HandId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HandImportJob>(entity =>
+        {
+            entity.HasKey(job => job.JobId);
+            entity.Property(job => job.Status).HasConversion<string>().HasMaxLength(16);
+            entity.HasIndex(job => new { job.Status, job.CreatedAt });
+            entity
+                .HasMany(job => job.Files)
+                .WithOne()
+                .HasForeignKey(file => file.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HandImportJobFile>(entity =>
+        {
+            entity.HasKey(file => file.FileId);
+            entity.Property(file => file.FileName).HasMaxLength(255).IsRequired();
+            entity.Property(file => file.StorageKey).HasMaxLength(255).IsRequired();
+            entity.Property(file => file.Status).HasConversion<string>().HasMaxLength(16);
+            entity.Property(file => file.ErrorMessage).HasColumnType("longtext");
+            entity.HasIndex(file => new { file.Status, file.LeaseExpiresAt });
+            entity.HasIndex(file => new { file.JobId, file.Sequence }).IsUnique();
         });
     }
 }

@@ -9,6 +9,7 @@ public interface IHandImportService
         IReadOnlyCollection<IFormFile> files,
         CancellationToken cancellationToken
     );
+    Task<HandImportFileSummary> ImportFileAsync(Stream stream, CancellationToken cancellationToken);
 }
 
 public class HandImportService : IHandImportService
@@ -42,43 +43,57 @@ public class HandImportService : IHandImportService
 
         foreach (var file in files)
         {
-            using var reader = new StreamReader(
-                file.OpenReadStream(),
-                detectEncodingFromByteOrderMarks: true
-            );
-
-            await foreach (var rawHand in _reader.ReadHandsAsync(reader, cancellationToken))
-            {
-                var parseResult = _parser.ParseHand(rawHand);
-                if (parseResult is HandHistoryParseFailure failure)
-                {
-                    invalidHands++;
-                    _logger.LogWarning("Skipping hand: {Reason}", failure.Error);
-                    continue;
-                }
-
-                if (parseResult is not HandHistoryParseSuccess success)
-                {
-                    throw new InvalidOperationException(
-                        $"Unexpected parse result type: {parseResult.GetType().Name}"
-                    );
-                }
-
-                var hand =
-                    success.Hand
-                    ?? throw new InvalidOperationException(
-                        "A successful parse result must contain a parsed hand."
-                    );
-                if (!await _repository.TryAddHandAsync(hand, rawHand, cancellationToken))
-                {
-                    duplicateHands++;
-                    continue;
-                }
-
-                savedHands++;
-            }
+            using var stream = file.OpenReadStream();
+            var summary = await ImportFileAsync(stream, cancellationToken);
+            savedHands += summary.HandsSaved;
+            duplicateHands += summary.DuplicateHands;
+            invalidHands += summary.InvalidHands;
         }
 
         return new HandImportSummary(files.Count, savedHands, duplicateHands, invalidHands);
+    }
+
+    public async Task<HandImportFileSummary> ImportFileAsync(
+        Stream stream,
+        CancellationToken cancellationToken
+    )
+    {
+        using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
+        var savedHands = 0;
+        var duplicateHands = 0;
+        var invalidHands = 0;
+
+        await foreach (var rawHand in _reader.ReadHandsAsync(reader, cancellationToken))
+        {
+            var parseResult = _parser.ParseHand(rawHand);
+            if (parseResult is HandHistoryParseFailure failure)
+            {
+                invalidHands++;
+                _logger.LogWarning("Skipping hand: {Reason}", failure.Error);
+                continue;
+            }
+
+            if (parseResult is not HandHistoryParseSuccess success)
+            {
+                throw new InvalidOperationException(
+                    $"Unexpected parse result type: {parseResult.GetType().Name}"
+                );
+            }
+
+            var hand =
+                success.Hand
+                ?? throw new InvalidOperationException(
+                    "A successful parse result must contain a parsed hand."
+                );
+            if (!await _repository.TryAddHandAsync(hand, rawHand, cancellationToken))
+            {
+                duplicateHands++;
+                continue;
+            }
+
+            savedHands++;
+        }
+
+        return new HandImportFileSummary(savedHands, duplicateHands, invalidHands);
     }
 }
