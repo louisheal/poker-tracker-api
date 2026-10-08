@@ -9,6 +9,7 @@ using PokerTrackerApi.HandImporting.HandReaders;
 using PokerTrackerApi.HandImporting.HandReprocessing;
 using PokerTrackerApi.HandImporting.Jobs;
 using PokerTrackerApi.HandReplays;
+using PokerTrackerApi.MassData;
 using PokerTrackerApi.Metrics;
 using PokerTrackerApi.Persistence;
 using PokerTrackerApi.PreflopSpots;
@@ -28,6 +29,9 @@ builder.Services.AddScoped<IPreflopSpotRepository, PreflopSpotRepository>();
 builder.Services.AddScoped<IHandReprocessingRepository, HandReprocessingRepository>();
 builder.Services.AddScoped<IHandImportRepository, HandImportRepository>();
 builder.Services.AddScoped<IHandImportJobRepository, HandImportJobRepository>();
+builder.Services.AddScoped<IPostflopBettingRepository, PostflopBettingRepository>();
+builder.Services.AddScoped<IMassDataReprocessingRepository, MassDataReprocessingRepository>();
+builder.Services.AddScoped<IMassDataReprocessingService, MassDataReprocessingService>();
 
 builder.Services.AddScoped<IHandReprocessingService, HandReprocessingService>();
 builder.Services.AddScoped<IHandHistoryMapper, HandHistoryMapper>();
@@ -55,6 +59,7 @@ builder.Services.AddSingleton<IHandImportFileStore>(
     new HandImportFileStore(importStagingDirectory)
 );
 builder.Services.AddHostedService<HandImportBackgroundService>();
+builder.Services.AddHostedService<MassDataReprocessingBackgroundService>();
 
 builder.Services.AddOpenApi(options =>
 {

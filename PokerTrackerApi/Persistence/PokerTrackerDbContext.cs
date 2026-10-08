@@ -4,6 +4,7 @@ using PokerTrackerApi.Domain.PokerHand.Events;
 using PokerTrackerApi.HandAnnotations;
 using PokerTrackerApi.HandImporting;
 using PokerTrackerApi.HandImporting.Jobs;
+using PokerTrackerApi.MassData;
 using PokerTrackerApi.PreflopSpots;
 
 namespace PokerTrackerApi.Persistence;
@@ -30,6 +31,11 @@ public class PokerTrackerDbContext : DbContext
     public DbSet<HandImportJob> HandImportJobs => Set<HandImportJob>();
 
     public DbSet<HandImportJobFile> HandImportJobFiles => Set<HandImportJobFile>();
+
+    public DbSet<PostflopBettingSpot> PostflopBettingSpots => Set<PostflopBettingSpot>();
+
+    public DbSet<MassDataReprocessingJob> MassDataReprocessingJobs =>
+        Set<MassDataReprocessingJob>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -235,6 +241,47 @@ public class PokerTrackerDbContext : DbContext
             entity.Property(file => file.ErrorMessage).HasColumnType("longtext");
             entity.HasIndex(file => new { file.Status, file.LeaseExpiresAt });
             entity.HasIndex(file => new { file.JobId, file.Sequence }).IsUnique();
+        });
+
+        modelBuilder.Entity<PostflopBettingSpot>(entity =>
+        {
+            entity.HasKey(spot => new { spot.HandId, spot.Street });
+            entity.Property(spot => spot.HandId).HasMaxLength(32);
+            entity.Property(spot => spot.HeroPlayerId).HasMaxLength(255).IsRequired();
+            entity.Property(spot => spot.PfrPlayerId).HasMaxLength(255).IsRequired();
+            entity.Property(spot => spot.DefendingPlayerId).HasMaxLength(255).IsRequired();
+            entity.Property(spot => spot.Street).HasConversion<string>().HasMaxLength(16);
+            entity.Property(spot => spot.FlopHighCard).HasConversion<string>().HasMaxLength(8);
+            entity.Property(spot => spot.FlopTexture).HasConversion<string>().HasMaxLength(16);
+            entity.Property(spot => spot.PfrPosition).HasConversion<string>().HasMaxLength(8);
+            entity.Property(spot => spot.DefendingPosition).HasConversion<string>().HasMaxLength(8);
+            entity.Property(spot => spot.ResponseTo).HasConversion<string>().HasMaxLength(16);
+            entity.Property(spot => spot.ResponseAction).HasConversion<string>().HasMaxLength(16);
+            entity.Property(spot => spot.PfrBetBb).HasPrecision(12, 4);
+            entity.Property(spot => spot.DonkBetBb).HasPrecision(12, 4);
+            entity.Property(spot => spot.ResponseAmountBb).HasPrecision(12, 4);
+            entity.HasIndex(spot => new
+            {
+                spot.Street,
+                spot.PreflopRaiseCount,
+                spot.FlopWentCheckCheck,
+            });
+            entity.HasIndex(spot => new { spot.Street, spot.FlopHighCard });
+            entity.HasIndex(spot => new { spot.Street, spot.FlopTexture });
+            entity
+                .HasOne<Domain.PokerHand.PokerHand>()
+                .WithMany()
+                .HasForeignKey(spot => spot.HandId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MassDataReprocessingJob>(entity =>
+        {
+            entity.HasKey(job => job.JobId);
+            entity.Property(job => job.Status).HasConversion<string>().HasMaxLength(16);
+            entity.Property(job => job.LastProcessedHandId).HasMaxLength(32);
+            entity.Property(job => job.ErrorMessage).HasColumnType("longtext");
+            entity.HasIndex(job => new { job.Status, job.CreatedAt });
         });
     }
 }

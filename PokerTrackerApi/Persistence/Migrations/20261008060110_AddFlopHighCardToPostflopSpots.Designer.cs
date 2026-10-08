@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PokerTrackerApi.Persistence;
 
@@ -12,9 +13,11 @@ using PokerTrackerApi.Persistence;
 namespace PokerTrackerApi.Persistence.Migrations
 {
     [DbContext(typeof(PokerTrackerDbContext))]
-    partial class PokerTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261008060110_AddFlopHighCardToPostflopSpots")]
+    partial class AddFlopHighCardToPostflopSpots
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -325,10 +328,6 @@ namespace PokerTrackerApi.Persistence.Migrations
                         .HasMaxLength(8)
                         .HasColumnType("varchar(8)");
 
-                    b.Property<string>("FlopTexture")
-                        .HasMaxLength(16)
-                        .HasColumnType("varchar(16)");
-
                     b.Property<bool>("FlopWentCheckCheck")
                         .HasColumnType("tinyint(1)");
 
@@ -375,8 +374,6 @@ namespace PokerTrackerApi.Persistence.Migrations
                     b.HasKey("HandId", "Street");
 
                     b.HasIndex("Street", "FlopHighCard");
-
-                    b.HasIndex("Street", "FlopTexture");
 
                     b.HasIndex("Street", "PreflopRaiseCount", "FlopWentCheckCheck");
 

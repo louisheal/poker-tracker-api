@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.Domain.PokerHand;
 using PokerTrackerApi.HandAnnotations;
+using PokerTrackerApi.MassData;
 using PokerTrackerApi.Persistence;
 using PokerTrackerApi.PreflopSpots;
 
@@ -65,6 +66,9 @@ public class HandReprocessingRepository : IHandReprocessingRepository
 
         var handIds = pokerHands.Select(hand => hand.HandId).ToArray();
         var preflopSpots = pokerHands.SelectMany(hand => hand.ToPreflopSpots()).ToArray();
+        var postflopBettingSpots = pokerHands
+            .SelectMany(PostflopBettingSpotExtractor.Extract)
+            .ToArray();
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(
             cancellationToken
@@ -79,11 +83,15 @@ public class HandReprocessingRepository : IHandReprocessingRepository
                 .PreflopSpots.Where(spot => Enumerable.Contains(handIds, spot.HandId))
                 .ExecuteDeleteAsync(cancellationToken);
             await _dbContext
+                .PostflopBettingSpots.Where(spot => Enumerable.Contains(handIds, spot.HandId))
+                .ExecuteDeleteAsync(cancellationToken);
+            await _dbContext
                 .PokerHands.Where(hand => Enumerable.Contains(handIds, hand.HandId))
                 .ExecuteDeleteAsync(cancellationToken);
 
             _dbContext.PokerHands.AddRange(pokerHands);
             _dbContext.PreflopSpots.AddRange(preflopSpots);
+            _dbContext.PostflopBettingSpots.AddRange(postflopBettingSpots);
             _dbContext.HandLabelAssignments.AddRange(
                 existingLabels.Select(assignment => new HandLabelAssignment
                 {

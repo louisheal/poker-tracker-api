@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PokerTrackerApi.Persistence;
 
@@ -12,9 +13,11 @@ using PokerTrackerApi.Persistence;
 namespace PokerTrackerApi.Persistence.Migrations
 {
     [DbContext(typeof(PokerTrackerDbContext))]
-    partial class PokerTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261008044523_AddPostflopBettingSpots")]
+    partial class AddPostflopBettingSpots
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -251,52 +254,6 @@ namespace PokerTrackerApi.Persistence.Migrations
                     b.ToTable("RawHands");
                 });
 
-            modelBuilder.Entity("PokerTrackerApi.MassData.MassDataReprocessingJob", b =>
-                {
-                    b.Property<Guid>("JobId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<int>("AttemptCount")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("LastProcessedHandId")
-                        .HasMaxLength(32)
-                        .HasColumnType("varchar(32)");
-
-                    b.Property<DateTimeOffset?>("LeaseExpiresAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("ProcessedHands")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset?>("StartedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("varchar(16)");
-
-                    b.Property<int>("TotalHands")
-                        .HasColumnType("int");
-
-                    b.HasKey("JobId");
-
-                    b.HasIndex("Status", "CreatedAt");
-
-                    b.ToTable("MassDataReprocessingJobs");
-                });
-
             modelBuilder.Entity("PokerTrackerApi.MassData.PostflopBettingSpot", b =>
                 {
                     b.Property<string>("HandId")
@@ -320,14 +277,6 @@ namespace PokerTrackerApi.Persistence.Migrations
                     b.Property<decimal?>("DonkBetBb")
                         .HasPrecision(12, 4)
                         .HasColumnType("decimal(12,4)");
-
-                    b.Property<string>("FlopHighCard")
-                        .HasMaxLength(8)
-                        .HasColumnType("varchar(8)");
-
-                    b.Property<string>("FlopTexture")
-                        .HasMaxLength(16)
-                        .HasColumnType("varchar(16)");
 
                     b.Property<bool>("FlopWentCheckCheck")
                         .HasColumnType("tinyint(1)");
@@ -373,10 +322,6 @@ namespace PokerTrackerApi.Persistence.Migrations
                         .HasColumnType("varchar(16)");
 
                     b.HasKey("HandId", "Street");
-
-                    b.HasIndex("Street", "FlopHighCard");
-
-                    b.HasIndex("Street", "FlopTexture");
 
                     b.HasIndex("Street", "PreflopRaiseCount", "FlopWentCheckCheck");
 
