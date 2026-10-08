@@ -11,6 +11,14 @@ public interface IPostflopBettingRepository
         Rank? flopHighCard,
         IReadOnlyCollection<FlopTexture>? flopTextures,
         IReadOnlyCollection<PostflopPotType>? potTypes,
+        IReadOnlyCollection<PostflopActionSequence>? flopActionSequences,
+        IReadOnlyCollection<FlopRankTexture>? flopRankTextures,
+        IReadOnlyCollection<PostflopActionSequence>? turnActionSequences,
+        IReadOnlyCollection<PostflopRunout>? turnRunouts,
+        IReadOnlyCollection<PostflopRunout>? riverRunouts,
+        PostflopRiverBetSizeCategory? riverBetSizeCategory,
+        decimal? minRiverBetToPotPercent,
+        decimal? maxRiverBetToPotPercent,
         CancellationToken cancellationToken
     );
 }

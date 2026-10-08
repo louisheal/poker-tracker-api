@@ -2,49 +2,45 @@
 
 #nullable disable
 
-namespace PokerTrackerApi.Persistence.Migrations
+namespace PokerTrackerApi.Persistence.Migrations;
+
+/// <inheritdoc />
+public partial class RenameHandNotesToHandAnnotations : Migration
 {
     /// <inheritdoc />
-    public partial class RenameHandNotesToHandAnnotations : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropForeignKey(
-                name: "FK_HandNotes_RawHands_HandId",
-                table: "HandNotes"
-            );
+        migrationBuilder.DropForeignKey(name: "FK_HandNotes_RawHands_HandId", table: "HandNotes");
 
-            migrationBuilder.RenameTable(name: "HandNotes", newName: "HandAnnotations");
+        migrationBuilder.RenameTable(name: "HandNotes", newName: "HandAnnotations");
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_HandAnnotations_RawHands_HandId",
-                table: "HandAnnotations",
-                column: "HandId",
-                principalTable: "RawHands",
-                principalColumn: "HandId",
-                onDelete: ReferentialAction.Cascade
-            );
-        }
+        migrationBuilder.AddForeignKey(
+            name: "FK_HandAnnotations_RawHands_HandId",
+            table: "HandAnnotations",
+            column: "HandId",
+            principalTable: "RawHands",
+            principalColumn: "HandId",
+            onDelete: ReferentialAction.Cascade
+        );
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropForeignKey(
-                name: "FK_HandAnnotations_RawHands_HandId",
-                table: "HandAnnotations"
-            );
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropForeignKey(
+            name: "FK_HandAnnotations_RawHands_HandId",
+            table: "HandAnnotations"
+        );
 
-            migrationBuilder.RenameTable(name: "HandAnnotations", newName: "HandNotes");
+        migrationBuilder.RenameTable(name: "HandAnnotations", newName: "HandNotes");
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_HandNotes_RawHands_HandId",
-                table: "HandNotes",
-                column: "HandId",
-                principalTable: "RawHands",
-                principalColumn: "HandId",
-                onDelete: ReferentialAction.Cascade
-            );
-        }
+        migrationBuilder.AddForeignKey(
+            name: "FK_HandNotes_RawHands_HandId",
+            table: "HandNotes",
+            column: "HandId",
+            principalTable: "RawHands",
+            principalColumn: "HandId",
+            onDelete: ReferentialAction.Cascade
+        );
     }
 }

@@ -3,51 +3,74 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace PokerTrackerApi.Persistence.Migrations
+namespace PokerTrackerApi.Persistence.Migrations;
+
+/// <inheritdoc />
+public partial class AddHandImportJobs : Migration
 {
     /// <inheritdoc />
-    public partial class AddHandImportJobs : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.CreateTable(
+        migrationBuilder
+            .CreateTable(
                 name: "HandImportJobs",
                 columns: table => new
                 {
-                    JobId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Status = table.Column<string>(type: "varchar(16)", maxLength: 16, nullable: false)
+                    JobId = table.Column<Guid>(
+                        type: "char(36)",
+                        nullable: false,
+                        collation: "ascii_general_ci"
+                    ),
+                    Status = table
+                        .Column<string>(type: "varchar(16)", maxLength: 16, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     StartedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    CompletedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true)
+                    CompletedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_HandImportJobs", x => x.JobId);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
+                }
+            )
+            .Annotation("MySql:CharSet", "utf8mb4");
 
-            migrationBuilder.CreateTable(
+        migrationBuilder
+            .CreateTable(
                 name: "HandImportJobFiles",
                 columns: table => new
                 {
-                    FileId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    JobId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    FileId = table.Column<Guid>(
+                        type: "char(36)",
+                        nullable: false,
+                        collation: "ascii_general_ci"
+                    ),
+                    JobId = table.Column<Guid>(
+                        type: "char(36)",
+                        nullable: false,
+                        collation: "ascii_general_ci"
+                    ),
                     Sequence = table.Column<int>(type: "int", nullable: false),
-                    FileName = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false)
+                    FileName = table
+                        .Column<string>(type: "varchar(255)", maxLength: 255, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    StorageKey = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false)
+                    StorageKey = table
+                        .Column<string>(type: "varchar(255)", maxLength: 255, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Status = table.Column<string>(type: "varchar(16)", maxLength: 16, nullable: false)
+                    Status = table
+                        .Column<string>(type: "varchar(16)", maxLength: 16, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     AttemptCount = table.Column<int>(type: "int", nullable: false),
-                    LeaseExpiresAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    LeaseExpiresAt = table.Column<DateTimeOffset>(
+                        type: "datetime(6)",
+                        nullable: true
+                    ),
                     HandsSaved = table.Column<int>(type: "int", nullable: false),
                     DuplicateHands = table.Column<int>(type: "int", nullable: false),
                     InvalidHands = table.Column<int>(type: "int", nullable: false),
-                    ErrorMessage = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4")
+                    ErrorMessage = table
+                        .Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                 },
                 constraints: table =>
                 {
@@ -57,35 +80,37 @@ namespace PokerTrackerApi.Persistence.Migrations
                         column: x => x.JobId,
                         principalTable: "HandImportJobs",
                         principalColumn: "JobId",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            )
+            .Annotation("MySql:CharSet", "utf8mb4");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_HandImportJobFiles_JobId_Sequence",
-                table: "HandImportJobFiles",
-                columns: new[] { "JobId", "Sequence" },
-                unique: true);
+        migrationBuilder.CreateIndex(
+            name: "IX_HandImportJobFiles_JobId_Sequence",
+            table: "HandImportJobFiles",
+            columns: new[] { "JobId", "Sequence" },
+            unique: true
+        );
 
-            migrationBuilder.CreateIndex(
-                name: "IX_HandImportJobFiles_Status_LeaseExpiresAt",
-                table: "HandImportJobFiles",
-                columns: new[] { "Status", "LeaseExpiresAt" });
+        migrationBuilder.CreateIndex(
+            name: "IX_HandImportJobFiles_Status_LeaseExpiresAt",
+            table: "HandImportJobFiles",
+            columns: new[] { "Status", "LeaseExpiresAt" }
+        );
 
-            migrationBuilder.CreateIndex(
-                name: "IX_HandImportJobs_Status_CreatedAt",
-                table: "HandImportJobs",
-                columns: new[] { "Status", "CreatedAt" });
-        }
+        migrationBuilder.CreateIndex(
+            name: "IX_HandImportJobs_Status_CreatedAt",
+            table: "HandImportJobs",
+            columns: new[] { "Status", "CreatedAt" }
+        );
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(
-                name: "HandImportJobFiles");
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropTable(name: "HandImportJobFiles");
 
-            migrationBuilder.DropTable(
-                name: "HandImportJobs");
-        }
+        migrationBuilder.DropTable(name: "HandImportJobs");
     }
 }

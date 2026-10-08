@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PokerTrackerApi.Persistence;
 
@@ -12,9 +13,11 @@ using PokerTrackerApi.Persistence;
 namespace PokerTrackerApi.Persistence.Migrations
 {
     [DbContext(typeof(PokerTrackerDbContext))]
-    partial class PokerTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261008180144_AddRiverResponseAnalysisFields")]
+    partial class AddRiverResponseAnalysisFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -398,14 +401,6 @@ namespace PokerTrackerApi.Persistence.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("varchar(16)");
 
-                    b.Property<string>("RiverBetResponseLine")
-                        .HasMaxLength(8)
-                        .HasColumnType("varchar(8)");
-
-                    b.Property<decimal?>("RiverBetToPotRatio")
-                        .HasPrecision(12, 6)
-                        .HasColumnType("decimal(12,6)");
-
                     b.Property<string>("RiverRunout")
                         .HasMaxLength(24)
                         .HasColumnType("varchar(24)");
@@ -432,16 +427,8 @@ namespace PokerTrackerApi.Persistence.Migrations
                     b.Property<bool>("VillainRiverBet")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<string>("VillainRiverBetShowdownOutcome")
-                        .HasMaxLength(16)
-                        .HasColumnType("varchar(16)");
-
                     b.Property<bool>("VillainRiverRaise")
                         .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("VillainRiverRaiseShowdownOutcome")
-                        .HasMaxLength(16)
-                        .HasColumnType("varchar(16)");
 
                     b.HasKey("HandId", "Street");
 

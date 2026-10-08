@@ -27,6 +27,20 @@ public class PostflopBettingController : ControllerBase
         [FromQuery] Rank? flopHighCard,
         [FromQuery] List<FlopTexture>? flopTextures,
         [FromQuery] List<PostflopPotType>? potTypes,
+        [FromQuery] List<PostflopActionSequence>? flopActionSequences,
+        [FromQuery] List<FlopRankTexture>? flopRankTextures,
+        [FromQuery] List<PostflopActionSequence>? turnActionSequences,
+        [FromQuery] List<PostflopRunout>? turnRunouts,
+        [FromQuery] List<PostflopRunout>? riverRunouts,
+        [FromQuery] PostflopRiverBetSizeCategory? riverBetSizeCategory,
+        [FromQuery] decimal? minRiverBetToPotPercent,
+        [FromQuery] decimal? maxRiverBetToPotPercent,
+        [FromQuery(Name = "heroRiverBetSizeCategory")]
+            PostflopRiverBetSizeCategory? legacyHeroRiverBetSizeCategory,
+        [FromQuery(Name = "minHeroRiverBetToPotPercent")]
+            decimal? legacyMinHeroRiverBetToPotPercent,
+        [FromQuery(Name = "maxHeroRiverBetToPotPercent")]
+            decimal? legacyMaxHeroRiverBetToPotPercent,
         CancellationToken cancellationToken
     ) =>
         Ok(
@@ -37,6 +51,14 @@ public class PostflopBettingController : ControllerBase
                 flopHighCard,
                 flopTextures,
                 potTypes,
+                flopActionSequences,
+                flopRankTextures,
+                turnActionSequences,
+                turnRunouts,
+                riverRunouts,
+                riverBetSizeCategory ?? legacyHeroRiverBetSizeCategory,
+                minRiverBetToPotPercent ?? legacyMinHeroRiverBetToPotPercent,
+                maxRiverBetToPotPercent ?? legacyMaxHeroRiverBetToPotPercent,
                 cancellationToken
             )
         );

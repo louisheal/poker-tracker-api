@@ -2,31 +2,30 @@
 
 #nullable disable
 
-namespace PokerTrackerApi.Persistence.Migrations
+namespace PokerTrackerApi.Persistence.Migrations;
+
+/// <inheritdoc />
+public partial class RenameParsedHandToHandHistorySummary : Migration
 {
     /// <inheritdoc />
-    public partial class RenameParsedHandToHandHistorySummary : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<int>(
-                name: "ButtonSeat",
-                table: "ParsedHands",
-                type: "int",
-                nullable: false,
-                defaultValue: 0
-            );
+        migrationBuilder.AddColumn<int>(
+            name: "ButtonSeat",
+            table: "ParsedHands",
+            type: "int",
+            nullable: false,
+            defaultValue: 0
+        );
 
-            migrationBuilder.RenameTable(name: "ParsedHands", newName: "HandHistorySummaries");
-        }
+        migrationBuilder.RenameTable(name: "ParsedHands", newName: "HandHistorySummaries");
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.RenameTable(name: "HandHistorySummaries", newName: "ParsedHands");
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.RenameTable(name: "HandHistorySummaries", newName: "ParsedHands");
 
-            migrationBuilder.DropColumn(name: "ButtonSeat", table: "ParsedHands");
-        }
+        migrationBuilder.DropColumn(name: "ButtonSeat", table: "ParsedHands");
     }
 }

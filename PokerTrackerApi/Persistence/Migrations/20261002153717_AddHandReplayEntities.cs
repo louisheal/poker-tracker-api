@@ -2,29 +2,34 @@
 
 #nullable disable
 
-namespace PokerTrackerApi.Persistence.Migrations
+namespace PokerTrackerApi.Persistence.Migrations;
+
+/// <inheritdoc />
+public partial class AddHandReplayEntities : Migration
 {
     /// <inheritdoc />
-    public partial class AddHandReplayEntities : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.CreateTable(
+        migrationBuilder
+            .CreateTable(
                 name: "HandReplayEvents",
                 columns: table => new
                 {
-                    HandId = table.Column<string>(type: "varchar(32)", maxLength: 32, nullable: false)
+                    HandId = table
+                        .Column<string>(type: "varchar(32)", maxLength: 32, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Sequence = table.Column<int>(type: "int", nullable: false),
-                    Street = table.Column<string>(type: "varchar(16)", maxLength: 16, nullable: false)
+                    Street = table
+                        .Column<string>(type: "varchar(16)", maxLength: 16, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    EventType = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: false)
+                    EventType = table
+                        .Column<string>(type: "varchar(64)", maxLength: 64, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    PlayerId = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: true)
+                    PlayerId = table
+                        .Column<string>(type: "varchar(255)", maxLength: 255, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     AmountBB = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
-                    RaiseToAmountBB = table.Column<decimal>(type: "decimal(65,30)", nullable: true)
+                    RaiseToAmountBB = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
                 },
                 constraints: table =>
                 {
@@ -34,20 +39,28 @@ namespace PokerTrackerApi.Persistence.Migrations
                         column: x => x.HandId,
                         principalTable: "RawHands",
                         principalColumn: "HandId",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            )
+            .Annotation("MySql:CharSet", "utf8mb4");
 
-            migrationBuilder.CreateTable(
+        migrationBuilder
+            .CreateTable(
                 name: "HandReplayPlayers",
                 columns: table => new
                 {
-                    HandId = table.Column<string>(type: "varchar(32)", maxLength: 32, nullable: false)
+                    HandId = table
+                        .Column<string>(type: "varchar(32)", maxLength: 32, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    PlayerId = table.Column<string>(type: "varchar(255)", nullable: false)
+                    PlayerId = table
+                        .Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Position = table.Column<int>(type: "int", nullable: false),
-                    StartingStackBB = table.Column<decimal>(type: "decimal(65,30)", nullable: false)
+                    StartingStackBB = table.Column<decimal>(
+                        type: "decimal(65,30)",
+                        nullable: false
+                    ),
                 },
                 constraints: table =>
                 {
@@ -57,45 +70,55 @@ namespace PokerTrackerApi.Persistence.Migrations
                         column: x => x.HandId,
                         principalTable: "RawHands",
                         principalColumn: "HandId",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            )
+            .Annotation("MySql:CharSet", "utf8mb4");
 
-            migrationBuilder.CreateTable(
+        migrationBuilder
+            .CreateTable(
                 name: "HandReplayEventCards",
                 columns: table => new
                 {
-                    HandId = table.Column<string>(type: "varchar(32)", maxLength: 32, nullable: false)
+                    HandId = table
+                        .Column<string>(type: "varchar(32)", maxLength: 32, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Sequence = table.Column<int>(type: "int", nullable: false),
                     CardIndex = table.Column<int>(type: "int", nullable: false),
                     Card_Rank = table.Column<int>(type: "int", nullable: false),
-                    Card_Suit = table.Column<int>(type: "int", nullable: false)
+                    Card_Suit = table.Column<int>(type: "int", nullable: false),
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_HandReplayEventCards", x => new { x.HandId, x.Sequence, x.CardIndex });
+                    table.PrimaryKey(
+                        "PK_HandReplayEventCards",
+                        x => new
+                        {
+                            x.HandId,
+                            x.Sequence,
+                            x.CardIndex,
+                        }
+                    );
                     table.ForeignKey(
                         name: "FK_HandReplayEventCards_HandReplayEvents_HandId_Sequence",
                         columns: x => new { x.HandId, x.Sequence },
                         principalTable: "HandReplayEvents",
                         principalColumns: new[] { "HandId", "Sequence" },
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-        }
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            )
+            .Annotation("MySql:CharSet", "utf8mb4");
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(
-                name: "HandReplayEventCards");
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropTable(name: "HandReplayEventCards");
 
-            migrationBuilder.DropTable(
-                name: "HandReplayPlayers");
+        migrationBuilder.DropTable(name: "HandReplayPlayers");
 
-            migrationBuilder.DropTable(
-                name: "HandReplayEvents");
-        }
+        migrationBuilder.DropTable(name: "HandReplayEvents");
     }
 }

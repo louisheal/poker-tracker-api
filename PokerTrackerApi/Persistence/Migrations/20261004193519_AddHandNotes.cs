@@ -2,22 +2,25 @@
 
 #nullable disable
 
-namespace PokerTrackerApi.Persistence.Migrations
+namespace PokerTrackerApi.Persistence.Migrations;
+
+/// <inheritdoc />
+public partial class AddHandNotes : Migration
 {
     /// <inheritdoc />
-    public partial class AddHandNotes : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.CreateTable(
+        migrationBuilder
+            .CreateTable(
                 name: "HandNotes",
                 columns: table => new
                 {
-                    HandId = table.Column<string>(type: "varchar(32)", maxLength: 32, nullable: false)
+                    HandId = table
+                        .Column<string>(type: "varchar(32)", maxLength: 32, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Note = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4")
+                    Note = table
+                        .Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                 },
                 constraints: table =>
                 {
@@ -27,16 +30,16 @@ namespace PokerTrackerApi.Persistence.Migrations
                         column: x => x.HandId,
                         principalTable: "RawHands",
                         principalColumn: "HandId",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-        }
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            )
+            .Annotation("MySql:CharSet", "utf8mb4");
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(
-                name: "HandNotes");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropTable(name: "HandNotes");
     }
 }
