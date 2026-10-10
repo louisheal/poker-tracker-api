@@ -19,64 +19,9 @@ public class PostflopBettingController : ControllerBase
         _reprocessingService = reprocessingService;
     }
 
-    [HttpGet("postflop-betting/flop-response-buckets")]
-    public async Task<ActionResult<PostflopBetResponseBucketsDto>> GetFlopResponseBuckets(
-        [FromQuery] bool? pfrInPosition,
-        [FromQuery] PokerPosition? ipPosition,
-        [FromQuery] PokerPosition? oopPosition,
-        [FromQuery] Rank? flopHighCard,
-        [FromQuery] List<FlopTexture>? flopTextures,
-        [FromQuery] List<PostflopPotType>? potTypes,
-        [FromQuery] List<PostflopActionSequence>? flopActionSequences,
-        [FromQuery] List<FlopRankTexture>? flopRankTextures,
-        CancellationToken cancellationToken
-    ) =>
-        Ok(
-            await _repository.GetFlopResponseBucketsAsync(
-                pfrInPosition,
-                ipPosition,
-                oopPosition,
-                flopHighCard,
-                flopTextures,
-                potTypes,
-                flopActionSequences,
-                flopRankTextures,
-                cancellationToken
-            )
-        );
-
-    [HttpGet("postflop-betting/turn-response-buckets")]
-    public async Task<ActionResult<PostflopBetResponseBucketsDto>> GetTurnResponseBuckets(
-        [FromQuery] bool? pfrInPosition,
-        [FromQuery] PokerPosition? ipPosition,
-        [FromQuery] PokerPosition? oopPosition,
-        [FromQuery] Rank? flopHighCard,
-        [FromQuery] List<FlopTexture>? flopTextures,
-        [FromQuery] List<PostflopPotType>? potTypes,
-        [FromQuery] List<PostflopActionSequence>? flopActionSequences,
-        [FromQuery] List<FlopRankTexture>? flopRankTextures,
-        [FromQuery] List<PostflopActionSequence>? turnActionSequences,
-        [FromQuery] List<PostflopRunout>? turnRunouts,
-        CancellationToken cancellationToken
-    ) =>
-        Ok(
-            await _repository.GetTurnResponseBucketsAsync(
-                pfrInPosition,
-                ipPosition,
-                oopPosition,
-                flopHighCard,
-                flopTextures,
-                potTypes,
-                flopActionSequences,
-                flopRankTextures,
-                turnActionSequences,
-                turnRunouts,
-                cancellationToken
-            )
-        );
-
-    [HttpGet("postflop-betting")]
-    public async Task<ActionResult<PostflopBettingResponseDto>> GetPostflopBetting(
+    [HttpGet("postflop-betting/{street}/response-buckets")]
+    public async Task<ActionResult<PostflopBetResponseBucketsDto>> GetResponseBuckets(
+        [FromRoute] PokerStreet street,
         [FromQuery] bool? pfrInPosition,
         [FromQuery] PokerPosition? ipPosition,
         [FromQuery] PokerPosition? oopPosition,
@@ -89,35 +34,28 @@ public class PostflopBettingController : ControllerBase
         [FromQuery] List<PostflopRunout>? turnRunouts,
         [FromQuery] List<PostflopRunout>? riverRunouts,
         [FromQuery] PostflopRiverBetSizeCategory? riverBetSizeCategory,
-        [FromQuery] decimal? minRiverBetToPotPercent,
-        [FromQuery] decimal? maxRiverBetToPotPercent,
-        [FromQuery(Name = "heroRiverBetSizeCategory")]
-            PostflopRiverBetSizeCategory? legacyHeroRiverBetSizeCategory,
-        [FromQuery(Name = "minHeroRiverBetToPotPercent")]
-            decimal? legacyMinHeroRiverBetToPotPercent,
-        [FromQuery(Name = "maxHeroRiverBetToPotPercent")]
-            decimal? legacyMaxHeroRiverBetToPotPercent,
         CancellationToken cancellationToken
     ) =>
-        Ok(
-            await _repository.GetPostflopBettingAsync(
-                pfrInPosition,
-                ipPosition,
-                oopPosition,
-                flopHighCard,
-                flopTextures,
-                potTypes,
-                flopActionSequences,
-                flopRankTextures,
-                turnActionSequences,
-                turnRunouts,
-                riverRunouts,
-                riverBetSizeCategory ?? legacyHeroRiverBetSizeCategory,
-                minRiverBetToPotPercent ?? legacyMinHeroRiverBetToPotPercent,
-                maxRiverBetToPotPercent ?? legacyMaxHeroRiverBetToPotPercent,
-                cancellationToken
-            )
-        );
+        street == PokerStreet.Preflop
+            ? BadRequest("Response buckets are available for Flop, Turn, and River.")
+            : Ok(
+                await _repository.GetResponseBucketsAsync(
+                    street,
+                    pfrInPosition,
+                    ipPosition,
+                    oopPosition,
+                    flopHighCard,
+                    flopTextures,
+                    potTypes,
+                    flopActionSequences,
+                    flopRankTextures,
+                    turnActionSequences,
+                    turnRunouts,
+                    riverRunouts,
+                    riverBetSizeCategory,
+                    cancellationToken
+                )
+            );
 
     [HttpPost("reprocess")]
     public async Task<ActionResult<MassDataReprocessingJobDto>> Reprocess(

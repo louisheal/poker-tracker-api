@@ -52,20 +52,6 @@ public enum PostflopRunout
     Other,
 }
 
-public enum RiverShowdownOutcome
-{
-    HeroWin,
-    VillainWin,
-    Chop,
-}
-
-public enum VillainRiverShowdownOutcome
-{
-    Win,
-    Loss,
-    Chop,
-}
-
 public enum PostflopRiverBetSizeCategory
 {
     Small,
@@ -79,8 +65,6 @@ public class PostflopBettingSpot
     public required string HandId { get; init; }
 
     public required string HeroPlayerId { get; init; }
-
-    public DateTimeOffset HandTimestamp { get; init; }
 
     public PokerStreet Street { get; init; }
 
@@ -110,43 +94,11 @@ public class PostflopBettingSpot
 
     public bool PfrInPosition { get; init; }
 
-    public bool FlopWentCheckCheck { get; init; }
-
-    public decimal? PfrBetBb { get; init; }
-
-    public decimal? DonkBetBb { get; init; }
-
     public PostflopResponseTo? ResponseTo { get; init; }
 
     public PostflopResponseAction? ResponseAction { get; init; }
 
-    public decimal? ResponseAmountBb { get; init; }
-
-    public PostflopResponseAction? HeroResponseToVillainRiverBet { get; init; }
-
-    public PostflopResponseAction? HeroResponseToVillainRiverRaise { get; init; }
-
-    public PostflopResponseAction? VillainResponseToHeroRiverBet { get; init; }
-
-    public decimal? HeroRiverBetToPotRatio { get; init; }
-
     public PostflopBetResponseLine? BetResponseLine { get; init; }
 
     public decimal? BetToPotRatio { get; init; }
-
-    public bool RiverWentToShowdown { get; init; }
-
-    public bool VillainRiverBet { get; init; }
-
-    public bool VillainRiverRaise { get; init; }
-
-    public VillainRiverShowdownOutcome? VillainRiverBetShowdownOutcome { get; init; }
-
-    public VillainRiverShowdownOutcome? VillainRiverRaiseShowdownOutcome { get; init; }
-
-    public bool HeroCalledVillainRiverBet { get; init; }
-
-    public bool HeroCalledVillainRiverRaise { get; init; }
-
-    public RiverShowdownOutcome? RiverShowdownOutcome { get; init; }
 }

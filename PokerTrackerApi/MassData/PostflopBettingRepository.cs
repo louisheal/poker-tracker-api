@@ -7,9 +7,6 @@ namespace PokerTrackerApi.MassData;
 
 public class PostflopBettingRepository : IPostflopBettingRepository
 {
-    private const string DelayedCBetContext =
-        "Heads-up single-raised pot; flop checked through; PFR in position";
-
     private readonly PokerTrackerDbContext _dbContext;
 
     public PostflopBettingRepository(PokerTrackerDbContext dbContext)
@@ -17,69 +14,8 @@ public class PostflopBettingRepository : IPostflopBettingRepository
         _dbContext = dbContext;
     }
 
-    public async Task<PostflopBetResponseBucketsDto> GetFlopResponseBucketsAsync(
-        bool? pfrInPosition,
-        PokerPosition? ipPosition,
-        PokerPosition? oopPosition,
-        Rank? flopHighCard,
-        IReadOnlyCollection<FlopTexture>? flopTextures,
-        IReadOnlyCollection<PostflopPotType>? potTypes,
-        IReadOnlyCollection<PostflopActionSequence>? flopActionSequences,
-        IReadOnlyCollection<FlopRankTexture>? flopRankTextures,
-        CancellationToken cancellationToken
-    )
-    {
-        var spots = ApplyFilters(
-            _dbContext.PostflopBettingSpots.AsNoTracking(),
-            pfrInPosition,
-            ipPosition,
-            oopPosition,
-            flopHighCard,
-            flopTextures,
-            potTypes,
-            flopActionSequences,
-            flopRankTextures,
-            turnActionSequences: null,
-            turnRunouts: null,
-            riverRunouts: null
-        );
-
-        return await AggregateBetResponseBucketsAsync(spots, PokerStreet.Flop, cancellationToken);
-    }
-
-    public async Task<PostflopBetResponseBucketsDto> GetTurnResponseBucketsAsync(
-        bool? pfrInPosition,
-        PokerPosition? ipPosition,
-        PokerPosition? oopPosition,
-        Rank? flopHighCard,
-        IReadOnlyCollection<FlopTexture>? flopTextures,
-        IReadOnlyCollection<PostflopPotType>? potTypes,
-        IReadOnlyCollection<PostflopActionSequence>? flopActionSequences,
-        IReadOnlyCollection<FlopRankTexture>? flopRankTextures,
-        IReadOnlyCollection<PostflopActionSequence>? turnActionSequences,
-        IReadOnlyCollection<PostflopRunout>? turnRunouts,
-        CancellationToken cancellationToken
-    )
-    {
-        var spots = ApplyFilters(
-            _dbContext.PostflopBettingSpots.AsNoTracking(),
-            pfrInPosition,
-            ipPosition,
-            oopPosition,
-            flopHighCard,
-            flopTextures,
-            potTypes,
-            flopActionSequences,
-            flopRankTextures,
-            turnActionSequences,
-            turnRunouts,
-            riverRunouts: null
-        );
-
-        return await AggregateBetResponseBucketsAsync(spots, PokerStreet.Turn, cancellationToken);
-    }
-
-    public async Task<PostflopBettingResponseDto> GetPostflopBettingAsync(
+    public async Task<PostflopBetResponseBucketsDto> GetResponseBucketsAsync(
+        PokerStreet street,
         bool? pfrInPosition,
         PokerPosition? ipPosition,
         PokerPosition? oopPosition,
@@ -92,8 +28,6 @@ public class PostflopBettingRepository : IPostflopBettingRepository
         IReadOnlyCollection<PostflopRunout>? turnRunouts,
         IReadOnlyCollection<PostflopRunout>? riverRunouts,
         PostflopRiverBetSizeCategory? riverBetSizeCategory,
-        decimal? minRiverBetToPotPercent,
-        decimal? maxRiverBetToPotPercent,
         CancellationToken cancellationToken
     )
     {
@@ -111,58 +45,34 @@ public class PostflopBettingRepository : IPostflopBettingRepository
             turnRunouts,
             riverRunouts
         );
-        var stats = new List<PostflopBettingStatDto>();
 
-        stats.AddRange(
-            await AggregateAsync(
-                spots.Where(spot => spot.Street == PokerStreet.Flop && spot.PfrBetBb.HasValue),
-                actorIsPfr: true,
-                opportunityType: "FlopContinuationBet",
-                responseTo: PostflopResponseTo.PfrBet,
-                delayedContext: null,
-                cancellationToken
-            )
-        );
-        stats.AddRange(
-            await AggregateAsync(
-                spots.Where(spot => spot.Street == PokerStreet.Flop && spot.DonkBetBb.HasValue),
-                actorIsPfr: false,
-                opportunityType: "DonkBet",
-                responseTo: PostflopResponseTo.DonkBet,
-                delayedContext: null,
-                cancellationToken
-            )
-        );
-        stats.AddRange(
-            await AggregateAsync(
-                spots.Where(spot =>
-                    spot.Street == PokerStreet.Turn
-                    && spot.PreflopRaiseCount == 1
-                    && spot.FlopWentCheckCheck
-                    && spot.PfrInPosition
-                    && spot.PfrBetBb.HasValue
-                ),
-                actorIsPfr: true,
-                opportunityType: "DelayedContinuationBet",
-                responseTo: PostflopResponseTo.PfrBet,
-                delayedContext: DelayedCBetContext,
-                cancellationToken
-            )
-        );
-
-        var riverStats = await AggregateRiverAsync(spots, cancellationToken);
-        var riverBetResponseAggregation = await AggregateRiverBetResponsesAsync(
-            spots.Where(spot => spot.Street == PokerStreet.River),
-            riverBetSizeCategory,
-            minRiverBetToPotPercent,
-            maxRiverBetToPotPercent,
-            cancellationToken
-        );
-
-        return new PostflopBettingResponseDto(stats, riverStats, riverBetResponseAggregation.Stats)
+        if (street == PokerStreet.Preflop)
         {
-            RiverBetResponseBuckets = riverBetResponseAggregation.Buckets,
-        };
+            throw new ArgumentOutOfRangeException(nameof(street), street, null);
+        }
+
+        var streetSpots = spots.Where(spot => spot.Street == street);
+        if (street == PokerStreet.River && riverBetSizeCategory.HasValue)
+        {
+            streetSpots = riverBetSizeCategory.Value switch
+            {
+                PostflopRiverBetSizeCategory.Small => streetSpots.Where(spot =>
+                    spot.BetToPotRatio < 0.4m
+                ),
+                PostflopRiverBetSizeCategory.Medium => streetSpots.Where(spot =>
+                    spot.BetToPotRatio >= 0.4m && spot.BetToPotRatio < 0.7m
+                ),
+                PostflopRiverBetSizeCategory.Large => streetSpots.Where(spot =>
+                    spot.BetToPotRatio >= 0.7m && spot.BetToPotRatio <= 1m
+                ),
+                PostflopRiverBetSizeCategory.Overbet => streetSpots.Where(spot =>
+                    spot.BetToPotRatio > 1m
+                ),
+                _ => streetSpots,
+            };
+        }
+
+        return await AggregateBetResponseBucketsAsync(streetSpots, street, cancellationToken);
     }
 
     private static IQueryable<PostflopBettingSpot> ApplyFilters(
@@ -277,83 +187,6 @@ public class PostflopBettingRepository : IPostflopBettingRepository
             _ => throw new ArgumentOutOfRangeException(nameof(potType), potType, null),
         };
 
-    private static async Task<IReadOnlyList<PostflopBettingStatDto>> AggregateAsync(
-        IQueryable<PostflopBettingSpot> spots,
-        bool actorIsPfr,
-        string opportunityType,
-        PostflopResponseTo responseTo,
-        string? delayedContext,
-        CancellationToken cancellationToken
-    )
-    {
-        var groupedStats = await spots
-            .Select(spot => new
-            {
-                ActorPosition = actorIsPfr ? spot.PfrPosition : spot.DefendingPosition,
-                ResponderPosition = actorIsPfr ? spot.DefendingPosition : spot.PfrPosition,
-                ActorIsHero = actorIsPfr
-                    ? spot.PfrPlayerId == spot.HeroPlayerId
-                    : spot.DefendingPlayerId == spot.HeroPlayerId,
-                ResponderIsHero = actorIsPfr
-                    ? spot.DefendingPlayerId == spot.HeroPlayerId
-                    : spot.PfrPlayerId == spot.HeroPlayerId,
-                BetAmountBb = actorIsPfr ? spot.PfrBetBb : spot.DonkBetBb,
-                ResponseAction = spot.ResponseTo == responseTo ? spot.ResponseAction : null,
-            })
-            .GroupBy(spot => new
-            {
-                spot.ActorPosition,
-                spot.ResponderPosition,
-                spot.ActorIsHero,
-                spot.ResponderIsHero,
-            })
-            .Select(group => new
-            {
-                group.Key.ActorPosition,
-                group.Key.ResponderPosition,
-                group.Key.ActorIsHero,
-                group.Key.ResponderIsHero,
-                OpportunityCount = group.Count(),
-                BetCount = group.Count(spot => spot.BetAmountBb > 0),
-                FoldCount = group.Count(spot => spot.ResponseAction == PostflopResponseAction.Fold),
-                CallCount = group.Count(spot => spot.ResponseAction == PostflopResponseAction.Call),
-                RaiseCount = group.Count(spot =>
-                    spot.ResponseAction == PostflopResponseAction.Raise
-                ),
-            })
-            .ToArrayAsync(cancellationToken);
-
-        return groupedStats
-            .Select(group =>
-            {
-                var responseCount = group.FoldCount + group.CallCount + group.RaiseCount;
-                var matchupDirection =
-                    group.ActorIsHero ? "HeroVsVillain"
-                    : group.ResponderIsHero ? "VillainVsHero"
-                    : "VillainVsVillain";
-
-                return new PostflopBettingStatDto(
-                    opportunityType,
-                    matchupDirection,
-                    group.ActorPosition.ToString(),
-                    group.ResponderPosition.ToString(),
-                    delayedContext,
-                    group.OpportunityCount,
-                    group.BetCount,
-                    (double)group.BetCount / group.OpportunityCount,
-                    [
-                        new("Fold", group.FoldCount, GetRate(group.FoldCount, responseCount)),
-                        new("Call", group.CallCount, GetRate(group.CallCount, responseCount)),
-                        new("Raise", group.RaiseCount, GetRate(group.RaiseCount, responseCount)),
-                    ]
-                );
-            })
-            .ToArray();
-    }
-
-    private static double GetRate(int count, int denominator) =>
-        denominator == 0 ? 0 : (double)count / denominator;
-
     private static async Task<PostflopBetResponseBucketsDto> AggregateBetResponseBucketsAsync(
         IQueryable<PostflopBettingSpot> spots,
         PokerStreet street,
@@ -387,211 +220,5 @@ public class PostflopBettingRepository : IPostflopBettingRepository
             ));
 
         return new(PostflopBetResponseBucketAggregator.Aggregate(populationResponses));
-    }
-
-    private static async Task<IReadOnlyList<PostflopRiverBettingStatDto>> AggregateRiverAsync(
-        IQueryable<PostflopBettingSpot> spots,
-        CancellationToken cancellationToken
-    )
-    {
-        var riverSpots = spots.Where(spot => spot.Street == PokerStreet.River);
-        var stats = new List<PostflopRiverBettingStatDto>();
-        stats.AddRange(
-            await AggregateRiverActionAsync(
-                riverSpots.Where(spot => spot.VillainRiverBet),
-                "Bet",
-                isRaise: false,
-                cancellationToken
-            )
-        );
-        stats.AddRange(
-            await AggregateRiverActionAsync(
-                riverSpots.Where(spot => spot.VillainRiverRaise),
-                "Raise",
-                isRaise: true,
-                cancellationToken
-            )
-        );
-        return stats;
-    }
-
-    private static async Task<IReadOnlyList<PostflopRiverBettingStatDto>> AggregateRiverActionAsync(
-        IQueryable<PostflopBettingSpot> spots,
-        string aggressionType,
-        bool isRaise,
-        CancellationToken cancellationToken
-    )
-    {
-        var groupedStats = await spots
-            .Select(spot => new
-            {
-                HeroIsInHand = spot.HeroPlayerId == spot.PfrPlayerId
-                    || spot.HeroPlayerId == spot.DefendingPlayerId,
-                VillainPosition = spot.HeroPlayerId == spot.PfrPlayerId
-                    ? (PokerPosition?)spot.DefendingPosition
-                : spot.HeroPlayerId == spot.DefendingPlayerId ? spot.PfrPosition
-                : null,
-                HeroPosition = spot.HeroPlayerId == spot.PfrPlayerId
-                    ? (PokerPosition?)spot.PfrPosition
-                : spot.HeroPlayerId == spot.DefendingPlayerId ? spot.DefendingPosition
-                : null,
-                HeroCalled = isRaise
-                    ? spot.HeroCalledVillainRiverRaise
-                    : spot.HeroCalledVillainRiverBet,
-                VillainShowdownOutcome = isRaise
-                    ? spot.VillainRiverRaiseShowdownOutcome
-                    : spot.VillainRiverBetShowdownOutcome,
-                spot.RiverWentToShowdown,
-                spot.RiverShowdownOutcome,
-            })
-            .GroupBy(spot => new
-            {
-                spot.VillainPosition,
-                spot.HeroPosition,
-                spot.HeroIsInHand,
-            })
-            .Select(group => new
-            {
-                group.Key.VillainPosition,
-                group.Key.HeroPosition,
-                group.Key.HeroIsInHand,
-                OpportunityCount = group.Count(),
-                HeroOpportunityCount = group.Count(spot => spot.HeroIsInHand),
-                ShowdownCount = group.Count(spot => spot.RiverWentToShowdown),
-                VillainWinCount = group.Count(spot =>
-                    spot.VillainShowdownOutcome == VillainRiverShowdownOutcome.Win
-                ),
-                OpponentWinCount = group.Count(spot =>
-                    spot.VillainShowdownOutcome == VillainRiverShowdownOutcome.Loss
-                ),
-                ChopCount = group.Count(spot =>
-                    spot.VillainShowdownOutcome == VillainRiverShowdownOutcome.Chop
-                ),
-                HeroCallCount = group.Count(spot => spot.HeroCalled),
-                HeroCallVillainWinCount = group.Count(spot =>
-                    spot.HeroCalled && spot.RiverShowdownOutcome == RiverShowdownOutcome.VillainWin
-                ),
-                HeroCallHeroWinCount = group.Count(spot =>
-                    spot.HeroCalled && spot.RiverShowdownOutcome == RiverShowdownOutcome.HeroWin
-                ),
-                HeroCallChopCount = group.Count(spot =>
-                    spot.HeroCalled && spot.RiverShowdownOutcome == RiverShowdownOutcome.Chop
-                ),
-            })
-            .ToArrayAsync(cancellationToken);
-
-        return groupedStats
-            .Select(group => new PostflopRiverBettingStatDto(
-                aggressionType,
-                group.VillainPosition?.ToString() ?? "VillainVsVillain",
-                group.HeroPosition?.ToString() ?? "NotInHand",
-                group.OpportunityCount,
-                group.HeroOpportunityCount,
-                group.ShowdownCount,
-                group.VillainWinCount,
-                group.OpponentWinCount,
-                group.ChopCount,
-                group.HeroCallCount,
-                group.HeroCallVillainWinCount,
-                group.HeroCallHeroWinCount,
-                group.HeroCallChopCount
-            ))
-            .ToArray();
-    }
-
-    private static async Task<(
-        IReadOnlyList<PostflopRiverBetResponseStatDto> Stats,
-        IReadOnlyList<PostflopBetResponseBucketDto> Buckets
-    )> AggregateRiverBetResponsesAsync(
-        IQueryable<PostflopBettingSpot> spots,
-        PostflopRiverBetSizeCategory? sizeCategory,
-        decimal? minBetToPotPercent,
-        decimal? maxBetToPotPercent,
-        CancellationToken cancellationToken
-    )
-    {
-        var minRatio = minBetToPotPercent / 100m;
-        var maxRatio = maxBetToPotPercent / 100m;
-        var riverBetResponses = spots.Where(spot =>
-            spot.ResponseTo.HasValue
-            && spot.ResponseAction.HasValue
-            && spot.BetResponseLine.HasValue
-        );
-        if (sizeCategory.HasValue || minBetToPotPercent.HasValue || maxBetToPotPercent.HasValue)
-        {
-            riverBetResponses = riverBetResponses.Where(spot => spot.BetToPotRatio.HasValue);
-        }
-
-        if (sizeCategory.HasValue)
-        {
-            riverBetResponses = sizeCategory.Value switch
-            {
-                PostflopRiverBetSizeCategory.Small => riverBetResponses.Where(spot =>
-                    spot.BetToPotRatio < 0.4m
-                ),
-                PostflopRiverBetSizeCategory.Medium => riverBetResponses.Where(spot =>
-                    spot.BetToPotRatio >= 0.4m && spot.BetToPotRatio < 0.7m
-                ),
-                PostflopRiverBetSizeCategory.Large => riverBetResponses.Where(spot =>
-                    spot.BetToPotRatio >= 0.7m && spot.BetToPotRatio <= 1m
-                ),
-                PostflopRiverBetSizeCategory.Overbet => riverBetResponses.Where(spot =>
-                    spot.BetToPotRatio > 1m
-                ),
-                _ => riverBetResponses,
-            };
-        }
-
-        if (minRatio.HasValue)
-        {
-            riverBetResponses = riverBetResponses.Where(spot =>
-                spot.BetToPotRatio >= minRatio.Value
-            );
-        }
-
-        if (maxRatio.HasValue)
-        {
-            riverBetResponses = riverBetResponses.Where(spot =>
-                spot.BetToPotRatio <= maxRatio.Value
-            );
-        }
-
-        var responses = await riverBetResponses
-            .Select(spot => new
-            {
-                ResponderIsHero = spot.ResponseTo == PostflopResponseTo.PfrBet
-                    ? spot.HeroPlayerId == spot.DefendingPlayerId
-                    : spot.HeroPlayerId == spot.PfrPlayerId,
-                BetResponseLine = spot.BetResponseLine!.Value,
-                spot.ResponseAction,
-                spot.BetToPotRatio,
-            })
-            .ToArrayAsync(cancellationToken);
-
-        var villainResponses = responses.Where(response => !response.ResponderIsHero).ToArray();
-        var buckets = PostflopBetResponseBucketAggregator.Aggregate(
-            villainResponses.Select(response => new PostflopBetResponseObservation(
-                response.BetResponseLine,
-                response.ResponseAction!.Value,
-                response.BetToPotRatio
-            ))
-        );
-        var stats = Enum.GetValues<PostflopBetResponseLine>()
-            .Select(line =>
-            {
-                var lineResponses = villainResponses
-                    .Where(response => response.BetResponseLine == line)
-                    .ToArray();
-                return new PostflopRiverBetResponseStatDto(
-                    line.ToString(),
-                    lineResponses.Length,
-                    lineResponses.Count(response =>
-                        response.ResponseAction == PostflopResponseAction.Fold
-                    )
-                );
-            })
-            .ToArray();
-
-        return (stats, buckets);
     }
 }

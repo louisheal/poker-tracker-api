@@ -85,7 +85,6 @@ public static class PostflopBettingSpotExtractor
             flopEnd,
             hand.HandId,
             hand.HeroPlayerId,
-            hand.Timestamp,
             PokerStreet.Flop,
             pfrPlayerId,
             defendingPlayerId,
@@ -93,7 +92,6 @@ public static class PostflopBettingSpotExtractor
             defender.Position,
             preflopRaiseCount,
             pfrInPosition,
-            false,
             flopHighCard.Value,
             flopTexture.Value,
             new PostflopBettingContext(
@@ -119,7 +117,6 @@ public static class PostflopBettingSpotExtractor
                 turnEnd,
                 hand.HandId,
                 hand.HeroPlayerId,
-                hand.Timestamp,
                 PokerStreet.Turn,
                 pfrPlayerId,
                 defendingPlayerId,
@@ -127,7 +124,6 @@ public static class PostflopBettingSpotExtractor
                 defender.Position,
                 preflopRaiseCount,
                 pfrInPosition,
-                flopActions.WentCheckCheck,
                 flopHighCard.Value,
                 flopTexture.Value,
                 new PostflopBettingContext(
@@ -146,31 +142,12 @@ public static class PostflopBettingSpotExtractor
             if (turnEnd < events.Length && events[turnEnd] is PokerHandRiverDealtEvent riverDealt)
             {
                 var riverEnd = FindNextStreetIndex(events, turnEnd + 1);
-                var riverShowdownOutcome = GetRiverShowdownOutcome(
-                    events,
-                    turnEnd + 1,
-                    riverEnd,
-                    hand.HeroPlayerId,
-                    pfrPlayerId,
-                    defendingPlayerId,
-                    out var riverWentToShowdown
-                );
-                var riverActionContext = GetRiverActionContext(
-                    events,
-                    turnEnd + 1,
-                    riverEnd,
-                    hand.HeroPlayerId,
-                    pfrPlayerId,
-                    defendingPlayerId,
-                    riverWentToShowdown
-                );
                 var riverActions = ReadStreetActions(
                     events,
                     turnEnd + 1,
                     riverEnd,
                     hand.HandId,
                     hand.HeroPlayerId,
-                    hand.Timestamp,
                     PokerStreet.River,
                     pfrPlayerId,
                     defendingPlayerId,
@@ -178,7 +155,6 @@ public static class PostflopBettingSpotExtractor
                     defender.Position,
                     preflopRaiseCount,
                     pfrInPosition,
-                    flopActions.WentCheckCheck,
                     flopHighCard.Value,
                     flopTexture.Value,
                     new PostflopBettingContext(
@@ -186,17 +162,7 @@ public static class PostflopBettingSpotExtractor
                         FlopRankTexture: flopRankTexture,
                         TurnActionSequence: turnActionSequence,
                         TurnRunout: turnRunout,
-                        RiverRunout: GetRiverRunout(flopEvent, turnDealt.Card, riverDealt.Card),
-                        VillainRiverBet: riverActionContext.VillainBet,
-                        VillainRiverRaise: riverActionContext.VillainRaise,
-                        VillainRiverBetShowdownOutcome: riverActionContext.BetShowdownOutcome,
-                        VillainRiverRaiseShowdownOutcome: riverActionContext.RaiseShowdownOutcome,
-                        HeroResponseToVillainRiverBet: riverActionContext.HeroResponseToVillainBet,
-                        HeroResponseToVillainRiverRaise: riverActionContext.HeroResponseToVillainRaise,
-                        VillainResponseToHeroRiverBet: riverActionContext.VillainResponseToHeroBet,
-                        HeroRiverBetToPotRatio: riverActionContext.HeroRiverBetToPotRatio,
-                        RiverWentToShowdown: riverWentToShowdown,
-                        RiverShowdownOutcome: riverShowdownOutcome
+                        RiverRunout: GetRiverRunout(flopEvent, turnDealt.Card, riverDealt.Card)
                     )
                 );
 
@@ -216,7 +182,6 @@ public static class PostflopBettingSpotExtractor
         int endIndex,
         string handId,
         string heroPlayerId,
-        DateTimeOffset handTimestamp,
         PokerStreet street,
         string pfrPlayerId,
         string defendingPlayerId,
@@ -224,17 +189,13 @@ public static class PostflopBettingSpotExtractor
         PokerPosition defendingPosition,
         int preflopRaiseCount,
         bool pfrInPosition,
-        bool flopWentCheckCheck,
         Rank flopHighCard,
         FlopTexture flopTexture,
         PostflopBettingContext? context = null
     )
     {
-        decimal? pfrBetBb = null;
-        decimal? donkBetBb = null;
         PostflopResponseTo? responseTo = null;
         PostflopResponseAction? responseAction = null;
-        decimal? responseAmountBb = null;
         string? pendingBettorId = null;
         decimal? pendingBetToPotRatio = null;
         PostflopBetResponseLine? betResponseLine = null;
@@ -242,9 +203,6 @@ public static class PostflopBettingSpotExtractor
         var pfrActed = false;
         var defenderActed = false;
         var checkedPlayerIds = new HashSet<string>(StringComparer.Ordinal);
-        var firstActions = new Dictionary<string, PokerHandPlayerActionEvent>(
-            StringComparer.Ordinal
-        );
         var sawBet = false;
 
         for (var index = startIndex; index < endIndex; index++)
@@ -259,7 +217,6 @@ public static class PostflopBettingSpotExtractor
                 continue;
             }
 
-            firstActions.TryAdd(action.PlayerId, action);
             if (action is PokerHandPlayerCheckEvent)
             {
                 checkedPlayerIds.Add(action.PlayerId);
@@ -267,14 +224,13 @@ public static class PostflopBettingSpotExtractor
 
             if (pendingBettorId is not null && action.PlayerId != pendingBettorId)
             {
-                if (TryGetResponse(action, out var currentResponse, out var currentAmount))
+                if (TryGetResponse(action, out var currentResponse))
                 {
                     responseTo =
                         pendingBettorId == pfrPlayerId
                             ? PostflopResponseTo.PfrBet
                             : PostflopResponseTo.DonkBet;
                     responseAction = currentResponse;
-                    responseAmountBb = currentAmount;
                     betResponseLine = checkedPlayerIds.Contains(action.PlayerId)
                         ? PostflopBetResponseLine.XBF
                         : PostflopBetResponseLine.BF;
@@ -296,86 +252,52 @@ public static class PostflopBettingSpotExtractor
             if (isPfr)
             {
                 pfrActed = true;
-                if (!sawBet && TryGetBetAmount(action, out var betAmount))
+                if (!sawBet && action is PokerHandPlayerBetEvent bet)
                 {
-                    pfrBetBb = betAmount;
-                    if (betAmount > 0)
-                    {
-                        pendingBettorId = pfrPlayerId;
-                        pendingBetToPotRatio = GetBetToPotRatio(events, index, betAmount);
-                        sawBet = true;
-                    }
+                    pendingBettorId = pfrPlayerId;
+                    pendingBetToPotRatio = GetBetToPotRatio(events, index, bet.BetAmountBB);
+                    sawBet = true;
                 }
             }
             else
             {
                 defenderActed = true;
-                if (!sawBet && TryGetBetAmount(action, out var betAmount))
+                if (!sawBet && action is PokerHandPlayerBetEvent bet)
                 {
-                    donkBetBb = betAmount;
-                    if (betAmount > 0)
-                    {
-                        pendingBettorId = defendingPlayerId;
-                        pendingBetToPotRatio = GetBetToPotRatio(events, index, betAmount);
-                        sawBet = true;
-                    }
+                    pendingBettorId = defendingPlayerId;
+                    pendingBetToPotRatio = GetBetToPotRatio(events, index, bet.BetAmountBB);
+                    sawBet = true;
                 }
             }
         }
 
-        var wentCheckCheck =
-            street == PokerStreet.Flop
-            && firstActions.Count == 2
-            && firstActions.Values.All(action => action is PokerHandPlayerCheckEvent)
-            && !sawBet;
+        var spot = !sawBet
+            ? null
+            : new PostflopBettingSpot
+            {
+                HandId = handId,
+                HeroPlayerId = heroPlayerId,
+                Street = street,
+                FlopHighCard = flopHighCard,
+                FlopTexture = flopTexture,
+                FlopActionSequence = context?.FlopActionSequence,
+                FlopRankTexture = context?.FlopRankTexture,
+                TurnActionSequence = context?.TurnActionSequence,
+                TurnRunout = context?.TurnRunout,
+                RiverRunout = context?.RiverRunout,
+                PfrPlayerId = pfrPlayerId,
+                DefendingPlayerId = defendingPlayerId,
+                PfrPosition = pfrPosition,
+                DefendingPosition = defendingPosition,
+                PreflopRaiseCount = preflopRaiseCount,
+                PfrInPosition = pfrInPosition,
+                ResponseTo = responseTo,
+                ResponseAction = responseAction,
+                BetResponseLine = betResponseLine,
+                BetToPotRatio = betToPotRatio,
+            };
 
-        var spot =
-            pfrBetBb is null && donkBetBb is null
-                ? null
-                : new PostflopBettingSpot
-                {
-                    HandId = handId,
-                    HeroPlayerId = heroPlayerId,
-                    HandTimestamp = handTimestamp,
-                    Street = street,
-                    FlopHighCard = flopHighCard,
-                    FlopTexture = flopTexture,
-                    FlopActionSequence = context?.FlopActionSequence,
-                    FlopRankTexture = context?.FlopRankTexture,
-                    TurnActionSequence = context?.TurnActionSequence,
-                    TurnRunout = context?.TurnRunout,
-                    RiverRunout = context?.RiverRunout,
-                    PfrPlayerId = pfrPlayerId,
-                    DefendingPlayerId = defendingPlayerId,
-                    PfrPosition = pfrPosition,
-                    DefendingPosition = defendingPosition,
-                    PreflopRaiseCount = preflopRaiseCount,
-                    PfrInPosition = pfrInPosition,
-                    FlopWentCheckCheck = flopWentCheckCheck,
-                    PfrBetBb = pfrBetBb,
-                    DonkBetBb = donkBetBb,
-                    ResponseTo = responseTo,
-                    ResponseAction = responseAction,
-                    ResponseAmountBb = responseAmountBb,
-                    BetResponseLine = betResponseLine,
-                    BetToPotRatio = betToPotRatio,
-                    VillainRiverBet = context?.VillainRiverBet ?? false,
-                    VillainRiverRaise = context?.VillainRiverRaise ?? false,
-                    VillainRiverBetShowdownOutcome = context?.VillainRiverBetShowdownOutcome,
-                    VillainRiverRaiseShowdownOutcome = context?.VillainRiverRaiseShowdownOutcome,
-                    HeroCalledVillainRiverBet =
-                        context?.HeroResponseToVillainRiverBet == PostflopResponseAction.Call,
-                    HeroCalledVillainRiverRaise =
-                        context?.HeroResponseToVillainRiverRaise == PostflopResponseAction.Call,
-                    HeroResponseToVillainRiverBet = context?.HeroResponseToVillainRiverBet,
-                    HeroResponseToVillainRiverRaise = context?.HeroResponseToVillainRiverRaise,
-                    VillainResponseToHeroRiverBet = context?.VillainResponseToHeroRiverBet,
-                    HeroRiverBetToPotRatio = context?.HeroRiverBetToPotRatio,
-                    RiverWentToShowdown = context?.RiverWentToShowdown ?? false,
-                    RiverShowdownOutcome = context?.RiverShowdownOutcome,
-                };
-
-        return new StreetActionResult(spot, wentCheckCheck);
+        return new StreetActionResult(spot);
     }
 
     private static FlopTexture GetFlopTexture(PokerHandFlopDealtEvent flop)
@@ -487,190 +409,6 @@ public static class PostflopBettingSpotExtractor
         return PostflopRunout.Other;
     }
 
-    private static RiverActionContext GetRiverActionContext(
-        IReadOnlyList<PokerHandEvent> events,
-        int startIndex,
-        int endIndex,
-        string heroPlayerId,
-        string pfrPlayerId,
-        string defendingPlayerId,
-        bool riverWentToShowdown
-    )
-    {
-        var heroIsInHand = heroPlayerId == pfrPlayerId || heroPlayerId == defendingPlayerId;
-        var villainPlayerId =
-            heroPlayerId == pfrPlayerId ? defendingPlayerId
-            : heroPlayerId == defendingPlayerId ? pfrPlayerId
-            : null;
-        var riverActions = events.Skip(startIndex).Take(endIndex - startIndex).ToArray();
-        var villainBet = riverActions
-            .OfType<PokerHandPlayerBetEvent>()
-            .FirstOrDefault(action => !heroIsInHand || action.PlayerId != heroPlayerId);
-        var villainRaise = riverActions
-            .OfType<PokerHandPlayerRaiseEvent>()
-            .FirstOrDefault(action => !heroIsInHand || action.PlayerId != heroPlayerId);
-        var heroBetIndex = Enumerable
-            .Range(startIndex, endIndex - startIndex)
-            .FirstOrDefault(
-                index =>
-                    events[index] is PokerHandPlayerBetEvent bet && bet.PlayerId == heroPlayerId,
-                -1
-            );
-        decimal? heroBetToPotRatio =
-            heroBetIndex < 0 ? null
-            : GetPotBeforeEvent(events, heroBetIndex) is var potBeforeBet && potBeforeBet > 0
-                ? ((PokerHandPlayerBetEvent)events[heroBetIndex]).BetAmountBB / potBeforeBet
-            : null;
-
-        var villainBetOpponentId =
-            villainBet?.PlayerId == pfrPlayerId ? defendingPlayerId
-            : villainBet?.PlayerId == defendingPlayerId ? pfrPlayerId
-            : null;
-        var villainRaiseOpponentId =
-            villainRaise?.PlayerId == pfrPlayerId ? defendingPlayerId
-            : villainRaise?.PlayerId == defendingPlayerId ? pfrPlayerId
-            : null;
-        if (villainPlayerId is null)
-        {
-            return new RiverActionContext(
-                villainBet is not null,
-                villainRaise is not null,
-                null,
-                null,
-                null,
-                heroBetToPotRatio,
-                GetVillainRiverShowdownOutcome(
-                    events,
-                    villainBet?.PlayerId,
-                    villainBetOpponentId,
-                    riverWentToShowdown
-                ),
-                GetVillainRiverShowdownOutcome(
-                    events,
-                    villainRaise?.PlayerId,
-                    villainRaiseOpponentId,
-                    riverWentToShowdown
-                )
-            );
-        }
-
-        return new RiverActionContext(
-            villainBet is not null,
-            villainRaise is not null,
-            GetDirectResponseToAction(
-                events,
-                startIndex,
-                endIndex,
-                villainPlayerId,
-                heroPlayerId,
-                aggressorActionIsRaise: false
-            ),
-            GetDirectResponseToAction(
-                events,
-                startIndex,
-                endIndex,
-                villainPlayerId,
-                heroPlayerId,
-                aggressorActionIsRaise: true
-            ),
-            GetDirectResponseToAction(
-                events,
-                startIndex,
-                endIndex,
-                heroPlayerId,
-                villainPlayerId,
-                aggressorActionIsRaise: false
-            ),
-            heroBetToPotRatio,
-            GetVillainRiverShowdownOutcome(
-                events,
-                villainBet?.PlayerId,
-                villainBetOpponentId,
-                riverWentToShowdown
-            ),
-            GetVillainRiverShowdownOutcome(
-                events,
-                villainRaise?.PlayerId,
-                villainRaiseOpponentId,
-                riverWentToShowdown
-            )
-        );
-    }
-
-    private static VillainRiverShowdownOutcome? GetVillainRiverShowdownOutcome(
-        IReadOnlyList<PokerHandEvent> events,
-        string? aggressorPlayerId,
-        string? opponentPlayerId,
-        bool riverWentToShowdown
-    )
-    {
-        if (!riverWentToShowdown || aggressorPlayerId is null || opponentPlayerId is null)
-        {
-            return null;
-        }
-
-        var awards = events
-            .OfType<PokerHandPotAwardedEvent>()
-            .Where(award =>
-                award.PlayerId == aggressorPlayerId || award.PlayerId == opponentPlayerId
-            )
-            .GroupBy(award => award.PlayerId)
-            .ToDictionary(group => group.Key, group => group.Sum(award => award.AmountBB));
-        var aggressorAward = awards.GetValueOrDefault(aggressorPlayerId);
-        var opponentAward = awards.GetValueOrDefault(opponentPlayerId);
-
-        if (aggressorAward > 0 && opponentAward > 0)
-        {
-            return VillainRiverShowdownOutcome.Chop;
-        }
-
-        if (aggressorAward > 0)
-        {
-            return VillainRiverShowdownOutcome.Win;
-        }
-
-        return opponentAward > 0 ? VillainRiverShowdownOutcome.Loss : null;
-    }
-
-    private static PostflopResponseAction? GetDirectResponseToAction(
-        IReadOnlyList<PokerHandEvent> events,
-        int startIndex,
-        int endIndex,
-        string aggressorPlayerId,
-        string responderPlayerId,
-        bool aggressorActionIsRaise
-    )
-    {
-        for (var index = startIndex; index < endIndex; index++)
-        {
-            var isAggression = aggressorActionIsRaise
-                ? events[index] is PokerHandPlayerRaiseEvent raise
-                    && raise.PlayerId == aggressorPlayerId
-                : events[index] is PokerHandPlayerBetEvent bet && bet.PlayerId == aggressorPlayerId;
-            if (!isAggression)
-            {
-                continue;
-            }
-
-            for (var responseIndex = index + 1; responseIndex < endIndex; responseIndex++)
-            {
-                if (
-                    events[responseIndex] is PokerHandPlayerActionEvent response
-                    && response.PlayerId == responderPlayerId
-                )
-                {
-                    return TryGetResponse(response, out var responseAction, out _)
-                        ? responseAction
-                        : null;
-                }
-            }
-
-            return null;
-        }
-
-        return null;
-    }
-
     private static decimal GetPotBeforeEvent(IReadOnlyList<PokerHandEvent> events, int eventIndex)
     {
         var potBb = 0m;
@@ -747,52 +485,6 @@ public static class PostflopBettingSpotExtractor
         string playerId
     ) => streetBets.TryGetValue(playerId, out var contribution) ? contribution : 0m;
 
-    private static RiverShowdownOutcome? GetRiverShowdownOutcome(
-        IReadOnlyList<PokerHandEvent> events,
-        int startIndex,
-        int endIndex,
-        string heroPlayerId,
-        string pfrPlayerId,
-        string defendingPlayerId,
-        out bool riverWentToShowdown
-    )
-    {
-        riverWentToShowdown = events
-            .Skip(startIndex)
-            .Take(endIndex - startIndex)
-            .OfType<PokerHandCardsShownEvent>()
-            .Any();
-        if (!riverWentToShowdown)
-        {
-            return null;
-        }
-
-        var awards = events
-            .OfType<PokerHandPotAwardedEvent>()
-            .Where(award =>
-                award.PlayerId == heroPlayerId
-                || award.PlayerId == pfrPlayerId
-                || award.PlayerId == defendingPlayerId
-            )
-            .GroupBy(award => award.PlayerId)
-            .ToDictionary(group => group.Key, group => group.Sum(award => award.AmountBB));
-        var heroAward = awards.GetValueOrDefault(heroPlayerId);
-        var villainPlayerId = heroPlayerId == pfrPlayerId ? defendingPlayerId : pfrPlayerId;
-        var villainAward = awards.GetValueOrDefault(villainPlayerId);
-
-        if (heroAward > 0 && villainAward > 0)
-        {
-            return RiverShowdownOutcome.Chop;
-        }
-
-        if (heroAward > 0)
-        {
-            return RiverShowdownOutcome.HeroWin;
-        }
-
-        return villainAward > 0 ? RiverShowdownOutcome.VillainWin : null;
-    }
-
     private static int FindNextStreetIndex(IReadOnlyList<PokerHandEvent> events, int startIndex)
     {
         for (var index = startIndex; index < events.Count; index++)
@@ -806,45 +498,24 @@ public static class PostflopBettingSpotExtractor
         return events.Count;
     }
 
-    private static bool TryGetBetAmount(PokerHandPlayerActionEvent action, out decimal amount)
-    {
-        switch (action)
-        {
-            case PokerHandPlayerCheckEvent:
-                amount = 0;
-                return true;
-            case PokerHandPlayerBetEvent bet:
-                amount = bet.BetAmountBB;
-                return true;
-            default:
-                amount = 0;
-                return false;
-        }
-    }
-
     private static bool TryGetResponse(
         PokerHandPlayerActionEvent action,
-        out PostflopResponseAction response,
-        out decimal? amount
+        out PostflopResponseAction response
     )
     {
         switch (action)
         {
             case PokerHandPlayerFoldEvent:
                 response = PostflopResponseAction.Fold;
-                amount = null;
                 return true;
             case PokerHandPlayerCallEvent call:
                 response = PostflopResponseAction.Call;
-                amount = call.CallAmountBB;
                 return true;
             case PokerHandPlayerRaiseEvent raise:
                 response = PostflopResponseAction.Raise;
-                amount = raise.RaiseAmountBB;
                 return true;
             default:
                 response = default;
-                amount = null;
                 return false;
         }
     }
@@ -861,34 +532,13 @@ public static class PostflopBettingSpotExtractor
             _ => throw new ArgumentOutOfRangeException(nameof(position), position, null),
         };
 
-    private sealed record StreetActionResult(PostflopBettingSpot? Spot, bool WentCheckCheck);
+    private sealed record StreetActionResult(PostflopBettingSpot? Spot);
 
     private sealed record PostflopBettingContext(
         PostflopActionSequence? FlopActionSequence = null,
         FlopRankTexture? FlopRankTexture = null,
         PostflopActionSequence? TurnActionSequence = null,
         PostflopRunout? TurnRunout = null,
-        PostflopRunout? RiverRunout = null,
-        bool VillainRiverBet = false,
-        bool VillainRiverRaise = false,
-        VillainRiverShowdownOutcome? VillainRiverBetShowdownOutcome = null,
-        VillainRiverShowdownOutcome? VillainRiverRaiseShowdownOutcome = null,
-        PostflopResponseAction? HeroResponseToVillainRiverBet = null,
-        PostflopResponseAction? HeroResponseToVillainRiverRaise = null,
-        PostflopResponseAction? VillainResponseToHeroRiverBet = null,
-        decimal? HeroRiverBetToPotRatio = null,
-        bool RiverWentToShowdown = false,
-        RiverShowdownOutcome? RiverShowdownOutcome = null
-    );
-
-    private sealed record RiverActionContext(
-        bool VillainBet,
-        bool VillainRaise,
-        PostflopResponseAction? HeroResponseToVillainBet,
-        PostflopResponseAction? HeroResponseToVillainRaise,
-        PostflopResponseAction? VillainResponseToHeroBet,
-        decimal? HeroRiverBetToPotRatio,
-        VillainRiverShowdownOutcome? BetShowdownOutcome,
-        VillainRiverShowdownOutcome? RaiseShowdownOutcome
+        PostflopRunout? RiverRunout = null
     );
 }

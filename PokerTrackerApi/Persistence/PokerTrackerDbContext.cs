@@ -264,46 +264,12 @@ public class PokerTrackerDbContext : DbContext
                 .HasMaxLength(8);
             entity.Property(spot => spot.TurnRunout).HasConversion<string>().HasMaxLength(24);
             entity.Property(spot => spot.RiverRunout).HasConversion<string>().HasMaxLength(24);
-            entity
-                .Property(spot => spot.RiverShowdownOutcome)
-                .HasConversion<string>()
-                .HasMaxLength(16);
-            entity
-                .Property(spot => spot.VillainRiverBetShowdownOutcome)
-                .HasConversion<string>()
-                .HasMaxLength(16);
-            entity
-                .Property(spot => spot.VillainRiverRaiseShowdownOutcome)
-                .HasConversion<string>()
-                .HasMaxLength(16);
-            entity
-                .Property(spot => spot.HeroResponseToVillainRiverBet)
-                .HasConversion<string>()
-                .HasMaxLength(16);
-            entity
-                .Property(spot => spot.HeroResponseToVillainRiverRaise)
-                .HasConversion<string>()
-                .HasMaxLength(16);
-            entity
-                .Property(spot => spot.VillainResponseToHeroRiverBet)
-                .HasConversion<string>()
-                .HasMaxLength(16);
             entity.Property(spot => spot.BetResponseLine).HasConversion<string>().HasMaxLength(8);
             entity.Property(spot => spot.PfrPosition).HasConversion<string>().HasMaxLength(8);
             entity.Property(spot => spot.DefendingPosition).HasConversion<string>().HasMaxLength(8);
             entity.Property(spot => spot.ResponseTo).HasConversion<string>().HasMaxLength(16);
             entity.Property(spot => spot.ResponseAction).HasConversion<string>().HasMaxLength(16);
-            entity.Property(spot => spot.PfrBetBb).HasPrecision(12, 4);
-            entity.Property(spot => spot.DonkBetBb).HasPrecision(12, 4);
-            entity.Property(spot => spot.ResponseAmountBb).HasPrecision(12, 4);
-            entity.Property(spot => spot.HeroRiverBetToPotRatio).HasPrecision(12, 6);
             entity.Property(spot => spot.BetToPotRatio).HasPrecision(12, 6);
-            entity.HasIndex(spot => new
-            {
-                spot.Street,
-                spot.PreflopRaiseCount,
-                spot.FlopWentCheckCheck,
-            });
             entity.HasIndex(spot => new { spot.Street, spot.FlopHighCard });
             entity.HasIndex(spot => new { spot.Street, spot.FlopTexture });
             entity.HasIndex(spot => new { spot.Street, spot.FlopActionSequence });
