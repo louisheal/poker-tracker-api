@@ -17,6 +17,68 @@ public class PostflopBettingRepository : IPostflopBettingRepository
         _dbContext = dbContext;
     }
 
+    public async Task<PostflopBetResponseBucketsDto> GetFlopResponseBucketsAsync(
+        bool? pfrInPosition,
+        PokerPosition? ipPosition,
+        PokerPosition? oopPosition,
+        Rank? flopHighCard,
+        IReadOnlyCollection<FlopTexture>? flopTextures,
+        IReadOnlyCollection<PostflopPotType>? potTypes,
+        IReadOnlyCollection<PostflopActionSequence>? flopActionSequences,
+        IReadOnlyCollection<FlopRankTexture>? flopRankTextures,
+        CancellationToken cancellationToken
+    )
+    {
+        var spots = ApplyFilters(
+            _dbContext.PostflopBettingSpots.AsNoTracking(),
+            pfrInPosition,
+            ipPosition,
+            oopPosition,
+            flopHighCard,
+            flopTextures,
+            potTypes,
+            flopActionSequences,
+            flopRankTextures,
+            turnActionSequences: null,
+            turnRunouts: null,
+            riverRunouts: null
+        );
+
+        return await AggregateBetResponseBucketsAsync(spots, PokerStreet.Flop, cancellationToken);
+    }
+
+    public async Task<PostflopBetResponseBucketsDto> GetTurnResponseBucketsAsync(
+        bool? pfrInPosition,
+        PokerPosition? ipPosition,
+        PokerPosition? oopPosition,
+        Rank? flopHighCard,
+        IReadOnlyCollection<FlopTexture>? flopTextures,
+        IReadOnlyCollection<PostflopPotType>? potTypes,
+        IReadOnlyCollection<PostflopActionSequence>? flopActionSequences,
+        IReadOnlyCollection<FlopRankTexture>? flopRankTextures,
+        IReadOnlyCollection<PostflopActionSequence>? turnActionSequences,
+        IReadOnlyCollection<PostflopRunout>? turnRunouts,
+        CancellationToken cancellationToken
+    )
+    {
+        var spots = ApplyFilters(
+            _dbContext.PostflopBettingSpots.AsNoTracking(),
+            pfrInPosition,
+            ipPosition,
+            oopPosition,
+            flopHighCard,
+            flopTextures,
+            potTypes,
+            flopActionSequences,
+            flopRankTextures,
+            turnActionSequences,
+            turnRunouts,
+            riverRunouts: null
+        );
+
+        return await AggregateBetResponseBucketsAsync(spots, PokerStreet.Turn, cancellationToken);
+    }
+
     public async Task<PostflopBettingResponseDto> GetPostflopBettingAsync(
         bool? pfrInPosition,
         PokerPosition? ipPosition,
@@ -89,7 +151,7 @@ public class PostflopBettingRepository : IPostflopBettingRepository
         );
 
         var riverStats = await AggregateRiverAsync(spots, cancellationToken);
-        var riverBetResponseStats = await AggregateRiverBetResponsesAsync(
+        var riverBetResponseAggregation = await AggregateRiverBetResponsesAsync(
             spots.Where(spot => spot.Street == PokerStreet.River),
             riverBetSizeCategory,
             minRiverBetToPotPercent,
@@ -97,7 +159,10 @@ public class PostflopBettingRepository : IPostflopBettingRepository
             cancellationToken
         );
 
-        return new PostflopBettingResponseDto(stats, riverStats, riverBetResponseStats);
+        return new PostflopBettingResponseDto(stats, riverStats, riverBetResponseAggregation.Stats)
+        {
+            RiverBetResponseBuckets = riverBetResponseAggregation.Buckets,
+        };
     }
 
     private static IQueryable<PostflopBettingSpot> ApplyFilters(
@@ -289,6 +354,41 @@ public class PostflopBettingRepository : IPostflopBettingRepository
     private static double GetRate(int count, int denominator) =>
         denominator == 0 ? 0 : (double)count / denominator;
 
+    private static async Task<PostflopBetResponseBucketsDto> AggregateBetResponseBucketsAsync(
+        IQueryable<PostflopBettingSpot> spots,
+        PokerStreet street,
+        CancellationToken cancellationToken
+    )
+    {
+        var responses = await spots
+            .Where(spot =>
+                spot.Street == street
+                && spot.ResponseTo.HasValue
+                && spot.ResponseAction.HasValue
+                && spot.BetResponseLine.HasValue
+            )
+            .Select(spot => new
+            {
+                ResponderIsHero = spot.ResponseTo == PostflopResponseTo.PfrBet
+                    ? spot.HeroPlayerId == spot.DefendingPlayerId
+                    : spot.HeroPlayerId == spot.PfrPlayerId,
+                Line = spot.BetResponseLine!.Value,
+                Action = spot.ResponseAction!.Value,
+                spot.BetToPotRatio,
+            })
+            .ToArrayAsync(cancellationToken);
+
+        var populationResponses = responses
+            .Where(response => !response.ResponderIsHero)
+            .Select(response => new PostflopBetResponseObservation(
+                response.Line,
+                response.Action,
+                response.BetToPotRatio
+            ));
+
+        return new(PostflopBetResponseBucketAggregator.Aggregate(populationResponses));
+    }
+
     private static async Task<IReadOnlyList<PostflopRiverBettingStatDto>> AggregateRiverAsync(
         IQueryable<PostflopBettingSpot> spots,
         CancellationToken cancellationToken
@@ -399,9 +499,10 @@ public class PostflopBettingRepository : IPostflopBettingRepository
             .ToArray();
     }
 
-    private static async Task<
-        IReadOnlyList<PostflopRiverBetResponseStatDto>
-    > AggregateRiverBetResponsesAsync(
+    private static async Task<(
+        IReadOnlyList<PostflopRiverBetResponseStatDto> Stats,
+        IReadOnlyList<PostflopBetResponseBucketDto> Buckets
+    )> AggregateRiverBetResponsesAsync(
         IQueryable<PostflopBettingSpot> spots,
         PostflopRiverBetSizeCategory? sizeCategory,
         decimal? minBetToPotPercent,
@@ -414,11 +515,11 @@ public class PostflopBettingRepository : IPostflopBettingRepository
         var riverBetResponses = spots.Where(spot =>
             spot.ResponseTo.HasValue
             && spot.ResponseAction.HasValue
-            && spot.RiverBetResponseLine.HasValue
+            && spot.BetResponseLine.HasValue
         );
         if (sizeCategory.HasValue || minBetToPotPercent.HasValue || maxBetToPotPercent.HasValue)
         {
-            riverBetResponses = riverBetResponses.Where(spot => spot.RiverBetToPotRatio.HasValue);
+            riverBetResponses = riverBetResponses.Where(spot => spot.BetToPotRatio.HasValue);
         }
 
         if (sizeCategory.HasValue)
@@ -426,16 +527,16 @@ public class PostflopBettingRepository : IPostflopBettingRepository
             riverBetResponses = sizeCategory.Value switch
             {
                 PostflopRiverBetSizeCategory.Small => riverBetResponses.Where(spot =>
-                    spot.RiverBetToPotRatio < 0.4m
+                    spot.BetToPotRatio < 0.4m
                 ),
                 PostflopRiverBetSizeCategory.Medium => riverBetResponses.Where(spot =>
-                    spot.RiverBetToPotRatio >= 0.4m && spot.RiverBetToPotRatio < 0.7m
+                    spot.BetToPotRatio >= 0.4m && spot.BetToPotRatio < 0.7m
                 ),
                 PostflopRiverBetSizeCategory.Large => riverBetResponses.Where(spot =>
-                    spot.RiverBetToPotRatio >= 0.7m && spot.RiverBetToPotRatio <= 1m
+                    spot.BetToPotRatio >= 0.7m && spot.BetToPotRatio <= 1m
                 ),
                 PostflopRiverBetSizeCategory.Overbet => riverBetResponses.Where(spot =>
-                    spot.RiverBetToPotRatio > 1m
+                    spot.BetToPotRatio > 1m
                 ),
                 _ => riverBetResponses,
             };
@@ -444,14 +545,14 @@ public class PostflopBettingRepository : IPostflopBettingRepository
         if (minRatio.HasValue)
         {
             riverBetResponses = riverBetResponses.Where(spot =>
-                spot.RiverBetToPotRatio >= minRatio.Value
+                spot.BetToPotRatio >= minRatio.Value
             );
         }
 
         if (maxRatio.HasValue)
         {
             riverBetResponses = riverBetResponses.Where(spot =>
-                spot.RiverBetToPotRatio <= maxRatio.Value
+                spot.BetToPotRatio <= maxRatio.Value
             );
         }
 
@@ -461,17 +562,25 @@ public class PostflopBettingRepository : IPostflopBettingRepository
                 ResponderIsHero = spot.ResponseTo == PostflopResponseTo.PfrBet
                     ? spot.HeroPlayerId == spot.DefendingPlayerId
                     : spot.HeroPlayerId == spot.PfrPlayerId,
-                RiverBetResponseLine = spot.RiverBetResponseLine!.Value,
+                BetResponseLine = spot.BetResponseLine!.Value,
                 spot.ResponseAction,
+                spot.BetToPotRatio,
             })
             .ToArrayAsync(cancellationToken);
 
         var villainResponses = responses.Where(response => !response.ResponderIsHero).ToArray();
-        return Enum.GetValues<RiverBetResponseLine>()
+        var buckets = PostflopBetResponseBucketAggregator.Aggregate(
+            villainResponses.Select(response => new PostflopBetResponseObservation(
+                response.BetResponseLine,
+                response.ResponseAction!.Value,
+                response.BetToPotRatio
+            ))
+        );
+        var stats = Enum.GetValues<PostflopBetResponseLine>()
             .Select(line =>
             {
                 var lineResponses = villainResponses
-                    .Where(response => response.RiverBetResponseLine == line)
+                    .Where(response => response.BetResponseLine == line)
                     .ToArray();
                 return new PostflopRiverBetResponseStatDto(
                     line.ToString(),
@@ -482,5 +591,7 @@ public class PostflopBettingRepository : IPostflopBettingRepository
                 );
             })
             .ToArray();
+
+        return (stats, buckets);
     }
 }

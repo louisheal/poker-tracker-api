@@ -288,10 +288,7 @@ public class PokerTrackerDbContext : DbContext
                 .Property(spot => spot.VillainResponseToHeroRiverBet)
                 .HasConversion<string>()
                 .HasMaxLength(16);
-            entity
-                .Property(spot => spot.RiverBetResponseLine)
-                .HasConversion<string>()
-                .HasMaxLength(8);
+            entity.Property(spot => spot.BetResponseLine).HasConversion<string>().HasMaxLength(8);
             entity.Property(spot => spot.PfrPosition).HasConversion<string>().HasMaxLength(8);
             entity.Property(spot => spot.DefendingPosition).HasConversion<string>().HasMaxLength(8);
             entity.Property(spot => spot.ResponseTo).HasConversion<string>().HasMaxLength(16);
@@ -300,7 +297,7 @@ public class PokerTrackerDbContext : DbContext
             entity.Property(spot => spot.DonkBetBb).HasPrecision(12, 4);
             entity.Property(spot => spot.ResponseAmountBb).HasPrecision(12, 4);
             entity.Property(spot => spot.HeroRiverBetToPotRatio).HasPrecision(12, 6);
-            entity.Property(spot => spot.RiverBetToPotRatio).HasPrecision(12, 6);
+            entity.Property(spot => spot.BetToPotRatio).HasPrecision(12, 6);
             entity.HasIndex(spot => new
             {
                 spot.Street,

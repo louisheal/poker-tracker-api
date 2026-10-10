@@ -11,13 +11,25 @@ public record PostflopBettingResponseDto(
     IReadOnlyList<PostflopBettingStatDto> Stats,
     IReadOnlyList<PostflopRiverBettingStatDto> RiverStats,
     IReadOnlyList<PostflopRiverBetResponseStatDto> RiverBetResponseStats
-);
+)
+{
+    public IReadOnlyList<PostflopBetResponseBucketDto> RiverBetResponseBuckets { get; init; } = [];
+}
 
 public record PostflopRiverBetResponseStatDto(
     string Line,
     int OpportunityCount,
     int VillainFoldCount
 );
+
+public record PostflopBetResponseBucketDto(
+    string Line,
+    int BetSizeThresholdPercent,
+    int OpportunityCount,
+    int VillainFoldCount
+);
+
+public record PostflopBetResponseBucketsDto(IReadOnlyList<PostflopBetResponseBucketDto> Buckets);
 
 public record PostflopRiverBettingStatDto(
     string AggressionType,

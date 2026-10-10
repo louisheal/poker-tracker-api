@@ -237,8 +237,8 @@ public static class PostflopBettingSpotExtractor
         decimal? responseAmountBb = null;
         string? pendingBettorId = null;
         decimal? pendingBetToPotRatio = null;
-        RiverBetResponseLine? riverBetResponseLine = null;
-        decimal? riverBetToPotRatio = null;
+        PostflopBetResponseLine? betResponseLine = null;
+        decimal? betToPotRatio = null;
         var pfrActed = false;
         var defenderActed = false;
         var checkedPlayerIds = new HashSet<string>(StringComparer.Ordinal);
@@ -275,13 +275,10 @@ public static class PostflopBettingSpotExtractor
                             : PostflopResponseTo.DonkBet;
                     responseAction = currentResponse;
                     responseAmountBb = currentAmount;
-                    if (street == PokerStreet.River)
-                    {
-                        riverBetResponseLine = checkedPlayerIds.Contains(action.PlayerId)
-                            ? RiverBetResponseLine.XBF
-                            : RiverBetResponseLine.BF;
-                        riverBetToPotRatio = pendingBetToPotRatio;
-                    }
+                    betResponseLine = checkedPlayerIds.Contains(action.PlayerId)
+                        ? PostflopBetResponseLine.XBF
+                        : PostflopBetResponseLine.BF;
+                    betToPotRatio = pendingBetToPotRatio;
                     pendingBettorId = null;
                     pendingBetToPotRatio = null;
                 }
@@ -305,10 +302,7 @@ public static class PostflopBettingSpotExtractor
                     if (betAmount > 0)
                     {
                         pendingBettorId = pfrPlayerId;
-                        pendingBetToPotRatio =
-                            street == PokerStreet.River
-                                ? GetBetToPotRatio(events, index, betAmount)
-                                : null;
+                        pendingBetToPotRatio = GetBetToPotRatio(events, index, betAmount);
                         sawBet = true;
                     }
                 }
@@ -322,10 +316,7 @@ public static class PostflopBettingSpotExtractor
                     if (betAmount > 0)
                     {
                         pendingBettorId = defendingPlayerId;
-                        pendingBetToPotRatio =
-                            street == PokerStreet.River
-                                ? GetBetToPotRatio(events, index, betAmount)
-                                : null;
+                        pendingBetToPotRatio = GetBetToPotRatio(events, index, betAmount);
                         sawBet = true;
                     }
                 }
@@ -366,8 +357,8 @@ public static class PostflopBettingSpotExtractor
                     ResponseTo = responseTo,
                     ResponseAction = responseAction,
                     ResponseAmountBb = responseAmountBb,
-                    RiverBetResponseLine = riverBetResponseLine,
-                    RiverBetToPotRatio = riverBetToPotRatio,
+                    BetResponseLine = betResponseLine,
+                    BetToPotRatio = betToPotRatio,
                     VillainRiverBet = context?.VillainRiverBet ?? false,
                     VillainRiverRaise = context?.VillainRiverRaise ?? false,
                     VillainRiverBetShowdownOutcome = context?.VillainRiverBetShowdownOutcome,

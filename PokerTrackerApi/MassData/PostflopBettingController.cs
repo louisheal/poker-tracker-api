@@ -19,6 +19,62 @@ public class PostflopBettingController : ControllerBase
         _reprocessingService = reprocessingService;
     }
 
+    [HttpGet("postflop-betting/flop-response-buckets")]
+    public async Task<ActionResult<PostflopBetResponseBucketsDto>> GetFlopResponseBuckets(
+        [FromQuery] bool? pfrInPosition,
+        [FromQuery] PokerPosition? ipPosition,
+        [FromQuery] PokerPosition? oopPosition,
+        [FromQuery] Rank? flopHighCard,
+        [FromQuery] List<FlopTexture>? flopTextures,
+        [FromQuery] List<PostflopPotType>? potTypes,
+        [FromQuery] List<PostflopActionSequence>? flopActionSequences,
+        [FromQuery] List<FlopRankTexture>? flopRankTextures,
+        CancellationToken cancellationToken
+    ) =>
+        Ok(
+            await _repository.GetFlopResponseBucketsAsync(
+                pfrInPosition,
+                ipPosition,
+                oopPosition,
+                flopHighCard,
+                flopTextures,
+                potTypes,
+                flopActionSequences,
+                flopRankTextures,
+                cancellationToken
+            )
+        );
+
+    [HttpGet("postflop-betting/turn-response-buckets")]
+    public async Task<ActionResult<PostflopBetResponseBucketsDto>> GetTurnResponseBuckets(
+        [FromQuery] bool? pfrInPosition,
+        [FromQuery] PokerPosition? ipPosition,
+        [FromQuery] PokerPosition? oopPosition,
+        [FromQuery] Rank? flopHighCard,
+        [FromQuery] List<FlopTexture>? flopTextures,
+        [FromQuery] List<PostflopPotType>? potTypes,
+        [FromQuery] List<PostflopActionSequence>? flopActionSequences,
+        [FromQuery] List<FlopRankTexture>? flopRankTextures,
+        [FromQuery] List<PostflopActionSequence>? turnActionSequences,
+        [FromQuery] List<PostflopRunout>? turnRunouts,
+        CancellationToken cancellationToken
+    ) =>
+        Ok(
+            await _repository.GetTurnResponseBucketsAsync(
+                pfrInPosition,
+                ipPosition,
+                oopPosition,
+                flopHighCard,
+                flopTextures,
+                potTypes,
+                flopActionSequences,
+                flopRankTextures,
+                turnActionSequences,
+                turnRunouts,
+                cancellationToken
+            )
+        );
+
     [HttpGet("postflop-betting")]
     public async Task<ActionResult<PostflopBettingResponseDto>> GetPostflopBetting(
         [FromQuery] bool? pfrInPosition,

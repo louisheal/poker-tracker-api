@@ -16,7 +16,7 @@ public enum PostflopResponseTo
     DonkBet,
 }
 
-public enum RiverBetResponseLine
+public enum PostflopBetResponseLine
 {
     BF,
     XBF,
@@ -130,9 +130,9 @@ public class PostflopBettingSpot
 
     public decimal? HeroRiverBetToPotRatio { get; init; }
 
-    public RiverBetResponseLine? RiverBetResponseLine { get; init; }
+    public PostflopBetResponseLine? BetResponseLine { get; init; }
 
-    public decimal? RiverBetToPotRatio { get; init; }
+    public decimal? BetToPotRatio { get; init; }
 
     public bool RiverWentToShowdown { get; init; }
 
