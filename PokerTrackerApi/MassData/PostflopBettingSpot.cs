@@ -19,7 +19,11 @@ public enum PostflopResponseTo
 public enum PostflopBetResponseLine
 {
     BF,
+    BR,
+    BRF,
     XBF,
+    XBR,
+    XBRF,
 }
 
 public enum FlopTexture

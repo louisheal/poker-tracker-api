@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using PokerTrackerApi.Domain;
 using PokerTrackerApi.Domain.PokerHand;
@@ -7,66 +8,102 @@ namespace PokerTrackerApi.MassData;
 
 public static class PostflopBettingSpotExtractor
 {
+    // get the initial required hand details
+    // split actions by street and filter by player action events
+    // should end up with 0, 1, 2, or 3 groups of actions
+    // flatmap the action groups into postflop betting spots
+
+    // read street actions should return a list of actions
+    // accepts a list of player action events
+    // builds a spot after each player action
+    // eg X, XB, XBF
+    // eg B, BR, BRF
+
+    private static string? CalculatePfrPlayerId(PokerHand hand) =>
+        hand
+            .Events.OrderBy((handEvent) => handEvent.Sequence)
+            .TakeWhile((handEvent) => handEvent is not PokerHandFlopDealtEvent)
+            .OfType<PokerHandPlayerActionEvent>()
+            .Where((handEvent) => handEvent is PokerHandPlayerRaiseEvent or PokerHandPlayerBetEvent)
+            .Select((handEvent) => handEvent.PlayerId)
+            .LastOrDefault();
+
+    private static int CalculatePreflopRaiseCount(PokerHand hand) =>
+        hand
+            .Events.OrderBy((handEvent) => handEvent.Sequence)
+            .TakeWhile((handEvent) => handEvent is not PokerHandFlopDealtEvent)
+            .Count(
+                (handEvent) => handEvent is PokerHandPlayerRaiseEvent or PokerHandPlayerBetEvent
+            );
+
+    private static HashSet<string> CalculateActivePlayers(PokerHand hand) =>
+        hand
+            .Players.Select((player) => player.PlayerId)
+            .Except(
+                hand.Events.OrderBy((handEvent) => handEvent.Sequence)
+                    .TakeWhile((handEvent) => handEvent is not PokerHandFlopDealtEvent)
+                    .OfType<PokerHandPlayerFoldEvent>()
+                    .Select((handEvent) => handEvent.PlayerId),
+                StringComparer.Ordinal
+            )
+            .ToHashSet(StringComparer.Ordinal);
+
+    private record FlopInfo(
+        Rank FlopHighCard,
+        FlopTexture FlopTexture,
+        FlopRankTexture FlopRankTexture
+    );
+
+    private static FlopInfo? ExtractFlopInfo(PokerHand hand) =>
+        hand
+            .Events.OfType<PokerHandFlopDealtEvent>()
+            .Select(
+                (handEvent) =>
+                    new FlopInfo(
+                        GetFlopHighCard(handEvent),
+                        GetFlopTexture(handEvent),
+                        GetFlopRankTexture(handEvent)
+                    )
+            )
+            .FirstOrDefault();
+
+    private static Dictionary<PokerStreet, IReadOnlyList<PokerHandPlayerActionEvent>> PlayerActionsByStreet(PokerHand hand)
+    {
+        var flopActions = hand.Events
+            .SkipWhile((handEvent) => handEvent is not PokerHandFlopDealtEvent)
+            .TakeWhile((handEvent) => handEvent is not PokerHandTurnDealtEvent)
+            .OfType<PokerHandPlayerActionEvent>()
+            .ToList();
+        var turnActions = hand.Events
+            .SkipWhile((handEvent) => handEvent is not PokerHandTurnDealtEvent)
+            .TakeWhile((handEvent) => handEvent is not PokerHandRiverDealtEvent)
+            .OfType<PokerHandPlayerActionEvent>()
+            .ToList();
+        var riverActions = hand.Events
+            .SkipWhile((handEvent) => handEvent is not PokerHandRiverDealtEvent)
+            .OfType<PokerHandPlayerActionEvent>()
+            .ToList();
+        
+        return new Dictionary<PokerStreet, IReadOnlyList<PokerHandPlayerActionEvent>>
+        {
+            [PokerStreet.Flop] = flopActions,
+            [PokerStreet.Turn] = turnActions,
+            [PokerStreet.River] = riverActions
+        };
+    }
+
     public static IReadOnlyList<PostflopBettingSpot> Extract(PokerHand hand)
     {
-        ArgumentNullException.ThrowIfNull(hand);
-
         var events = hand.Events.OrderBy(handEvent => handEvent.Sequence).ToArray();
         var players = hand.Players.ToDictionary(player => player.PlayerId);
-        var activePlayers = players.Keys.ToHashSet(StringComparer.Ordinal);
-        string? pfrPlayerId = null;
-        var preflopRaiseCount = 0;
-        var flopIndex = -1;
-        PokerHandFlopDealtEvent? flopEvent = null;
-        Rank? flopHighCard = null;
-        FlopTexture? flopTexture = null;
 
-        for (var index = 0; index < events.Length; index++)
-        {
-            var handEvent = events[index];
-            if (handEvent is PokerHandBoardDealtEvent)
-            {
-                if (handEvent is PokerHandFlopDealtEvent flopDealt)
-                {
-                    flopIndex = index;
-                    flopEvent = flopDealt;
-                    flopHighCard = new[]
-                    {
-                        flopDealt.First.Rank,
-                        flopDealt.Second.Rank,
-                        flopDealt.Third.Rank,
-                    }.Max();
-                    flopTexture = GetFlopTexture(flopDealt);
-                }
+        var activePlayers = CalculateActivePlayers(hand);
 
-                break;
-            }
+        string? pfrPlayerId = CalculatePfrPlayerId(hand);
+        var preflopRaiseCount = CalculatePreflopRaiseCount(hand);
 
-            if (handEvent is PokerHandPlayerFoldEvent preflopFold)
-            {
-                activePlayers.Remove(preflopFold.PlayerId);
-            }
-            else if (handEvent is PokerHandPlayerRaiseEvent preflopRaise)
-            {
-                preflopRaiseCount++;
-                pfrPlayerId = preflopRaise.PlayerId;
-            }
-            else if (handEvent is PokerHandPlayerBetEvent preflopBet)
-            {
-                preflopRaiseCount++;
-                pfrPlayerId = preflopBet.PlayerId;
-            }
-        }
-
-        if (
-            flopIndex < 0
-            || flopEvent is null
-            || pfrPlayerId is null
-            || !flopHighCard.HasValue
-            || !flopTexture.HasValue
-            || !activePlayers.Contains(pfrPlayerId)
-            || activePlayers.Count != 2
-        )
+        var flopInfo = ExtractFlopInfo(hand);
+        if (flopInfo is null || activePlayers.Count != 2 || pfrPlayerId is null)
         {
             return [];
         }
@@ -75,14 +112,19 @@ public static class PostflopBettingSpotExtractor
         var pfr = players[pfrPlayerId];
         var defender = players[defendingPlayerId];
         var pfrInPosition = GetPostflopOrder(pfr.Position) > GetPostflopOrder(defender.Position);
+
+        var actionsByStreet = PlayerActionsByStreet(hand);
+
+        // TODO : we should have a dynamic list of spots
         var spots = new List<PostflopBettingSpot>(3);
-        var flopEnd = FindNextStreetIndex(events, flopIndex + 1);
-        var flopActionSequence = GetActionSequence(events, flopIndex + 1, flopEnd);
-        var flopRankTexture = GetFlopRankTexture(flopEvent);
+
+        // TODO : do we really need FlopIndex?
+        // What if we extracted the player actions per street
+        var flopEnd = FindNextStreetIndex(events, flopInfo.FlopIndex + 1);
+        var flopActionSequence = GetActionSequence(events, flopInfo.FlopIndex + 1, flopEnd);
+
         var flopActions = ReadStreetActions(
-            events,
-            flopIndex + 1,
-            flopEnd,
+            actionsByStreet[PokerStreet.Flop],
             hand.HandId,
             hand.HeroPlayerId,
             PokerStreet.Flop,
@@ -92,11 +134,11 @@ public static class PostflopBettingSpotExtractor
             defender.Position,
             preflopRaiseCount,
             pfrInPosition,
-            flopHighCard.Value,
-            flopTexture.Value,
+            flopInfo.FlopHighCard,
+            flopInfo.FlopTexture,
             new PostflopBettingContext(
                 FlopActionSequence: flopActionSequence,
-                FlopRankTexture: flopRankTexture
+                FlopRankTexture: flopInfo.FlopRankTexture
             )
         );
 
@@ -110,7 +152,7 @@ public static class PostflopBettingSpotExtractor
             var turnEnd = FindNextStreetIndex(events, flopEnd + 1);
             var turnDealt = (PokerHandTurnDealtEvent)events[flopEnd];
             var turnActionSequence = GetActionSequence(events, flopEnd + 1, turnEnd);
-            var turnRunout = GetTurnRunout(flopEvent, turnDealt.Card);
+            var turnRunout = GetTurnRunout(flopInfo.FlopEvent, turnDealt.Card);
             var turnActions = ReadStreetActions(
                 events,
                 flopEnd + 1,
@@ -124,11 +166,11 @@ public static class PostflopBettingSpotExtractor
                 defender.Position,
                 preflopRaiseCount,
                 pfrInPosition,
-                flopHighCard.Value,
-                flopTexture.Value,
+                flopInfo.FlopHighCard,
+                flopInfo.FlopTexture,
                 new PostflopBettingContext(
                     FlopActionSequence: flopActionSequence,
-                    FlopRankTexture: flopRankTexture,
+                    FlopRankTexture: flopInfo.FlopRankTexture,
                     TurnActionSequence: turnActionSequence,
                     TurnRunout: turnRunout
                 )
@@ -155,14 +197,19 @@ public static class PostflopBettingSpotExtractor
                     defender.Position,
                     preflopRaiseCount,
                     pfrInPosition,
-                    flopHighCard.Value,
-                    flopTexture.Value,
+                    flopInfo.FlopHighCard,
+                    flopInfo.FlopTexture,
                     new PostflopBettingContext(
                         FlopActionSequence: flopActionSequence,
-                        FlopRankTexture: flopRankTexture,
+                        FlopRankTexture: flopInfo.FlopRankTexture,
                         TurnActionSequence: turnActionSequence,
                         TurnRunout: turnRunout,
-                        RiverRunout: GetRiverRunout(flopEvent, turnDealt.Card, riverDealt.Card)
+                        // TODO : this only needs the flop event for the community cards
+                        RiverRunout: GetRiverRunout(
+                            flopInfo.FlopEvent,
+                            turnDealt.Card,
+                            riverDealt.Card
+                        )
                     )
                 );
 
@@ -176,10 +223,11 @@ public static class PostflopBettingSpotExtractor
         return spots;
     }
 
+    // TODO : why does ReadStreetActions return a single result?
+    // XBRF line is XBR and XBRF
     private static StreetActionResult ReadStreetActions(
-        IReadOnlyList<PokerHandEvent> events,
-        int startIndex,
-        int endIndex,
+        // TODO : can change type to PokerHandPlayerActionEvent
+        IReadOnlyList<PokerHandEvent> handEvents,
         string handId,
         string heroPlayerId,
         PokerStreet street,
@@ -205,18 +253,21 @@ public static class PostflopBettingSpotExtractor
         var checkedPlayerIds = new HashSet<string>(StringComparer.Ordinal);
         var sawBet = false;
 
-        for (var index = startIndex; index < endIndex; index++)
+        foreach (var handEvent in handEvents)
         {
-            if (events[index] is not PokerHandPlayerActionEvent action)
+            // TODO : can be removed - we only pass in action events now
+            if (handEvent is not PokerHandPlayerActionEvent action)
             {
                 continue;
             }
 
+            // TODO : might be an unnecessary guard
             if (action.PlayerId != pfrPlayerId && action.PlayerId != defendingPlayerId)
             {
                 continue;
             }
 
+            // TODO : yield return and break?
             if (action is PokerHandPlayerCheckEvent)
             {
                 checkedPlayerIds.Add(action.PlayerId);
@@ -255,7 +306,9 @@ public static class PostflopBettingSpotExtractor
                 if (!sawBet && action is PokerHandPlayerBetEvent bet)
                 {
                     pendingBettorId = pfrPlayerId;
-                    pendingBetToPotRatio = GetBetToPotRatio(events, index, bet.BetAmountBB);
+                    // TODO : really poor
+                    // recalcuating the pot size every time
+                    pendingBetToPotRatio = GetBetToPotRatio(handEvents, index, bet.BetAmountBB);
                     sawBet = true;
                 }
             }
@@ -265,7 +318,7 @@ public static class PostflopBettingSpotExtractor
                 if (!sawBet && action is PokerHandPlayerBetEvent bet)
                 {
                     pendingBettorId = defendingPlayerId;
-                    pendingBetToPotRatio = GetBetToPotRatio(events, index, bet.BetAmountBB);
+                    pendingBetToPotRatio = GetBetToPotRatio(handEvents, index, bet.BetAmountBB);
                     sawBet = true;
                 }
             }
@@ -299,6 +352,9 @@ public static class PostflopBettingSpotExtractor
 
         return new StreetActionResult(spot);
     }
+
+    private static Rank GetFlopHighCard(PokerHandFlopDealtEvent flop) =>
+        new[] { flop.First.Rank, flop.Second.Rank, flop.Third.Rank }.Max();
 
     private static FlopTexture GetFlopTexture(PokerHandFlopDealtEvent flop)
     {
@@ -500,7 +556,7 @@ public static class PostflopBettingSpotExtractor
 
     private static bool TryGetResponse(
         PokerHandPlayerActionEvent action,
-        out PostflopResponseAction response
+        [NotNullWhen(true)] out PostflopResponseAction? response
     )
     {
         switch (action)
@@ -508,10 +564,10 @@ public static class PostflopBettingSpotExtractor
             case PokerHandPlayerFoldEvent:
                 response = PostflopResponseAction.Fold;
                 return true;
-            case PokerHandPlayerCallEvent call:
+            case PokerHandPlayerCallEvent:
                 response = PostflopResponseAction.Call;
                 return true;
-            case PokerHandPlayerRaiseEvent raise:
+            case PokerHandPlayerRaiseEvent:
                 response = PostflopResponseAction.Raise;
                 return true;
             default:
