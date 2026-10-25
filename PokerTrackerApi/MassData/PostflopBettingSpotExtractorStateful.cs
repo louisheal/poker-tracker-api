@@ -7,6 +7,7 @@ public class PostflopBettingSpotExtractorStateful
 {
     private PokerStreet _pokerStreet = PokerStreet.Preflop;
     private HashSet<string> _activePlayers = [];
+    private decimal _potAmountBB = 0m;
 
     public IReadOnlyList<PostflopBettingSpot> Extract(PokerHand hand)
     {
@@ -18,8 +19,17 @@ public class PostflopBettingSpotExtractorStateful
         {
             switch (handEvent)
             {
+                case PokerHandSmallBlindPostEvent smallBlindPostEvent:
+                    HandleSmallBlindPostEvent(smallBlindPostEvent);
+                    break;
+                case PokerHandBigBlindPostEvent bigBlindPostEvent:
+                    HandleBigBlindPostEvent(bigBlindPostEvent);
+                    break;
                 case PokerHandPlayerFoldEvent playerFoldEvent:
                     HandlePlayerFoldEvent(playerFoldEvent);
+                    break;
+                case PokerHandPlayerBetEvent playerBetEvent:
+                    HandlePlayerBetEvent(playerBetEvent);
                     break;
                 case PokerHandFlopDealtEvent flopDealtEvent:
                     HandleFlopDealtEvent(flopDealtEvent);
@@ -36,17 +46,30 @@ public class PostflopBettingSpotExtractorStateful
         return [];
     }
 
+    // TODO : increase line length limit
+    private HandlerResult HandleSmallBlindPostEvent(
+        PokerHandSmallBlindPostEvent smallBlindPostEvent
+    )
+    {
+        _potAmountBB += smallBlindPostEvent.AmountBB;
+        return HandlerResult.Valid;
+    }
+
+    private HandlerResult HandleBigBlindPostEvent(PokerHandBigBlindPostEvent bigBlindPostEvent)
+    {
+        _potAmountBB += bigBlindPostEvent.AmountBB;
+        return HandlerResult.Valid;
+    }
+
     private HandlerResult HandlePlayerFoldEvent(PokerHandPlayerFoldEvent playerFoldEvent)
     {
-        // TODO : check if this is required
-        // we may not even check active players after preflop
-        // and this currently means that "active players" is actually "players who saw flop"
-        if (_pokerStreet != PokerStreet.Preflop)
-        {
-            return HandlerResult.Valid;
-        }
-
         _activePlayers.Remove(playerFoldEvent.PlayerId);
+        return HandlerResult.Valid;
+    }
+
+    private HandlerResult HandlePlayerBetEvent(PokerHandPlayerBetEvent playerBetEvent)
+    {
+        _potAmountBB += playerBetEvent.BetAmountBB;
         return HandlerResult.Valid;
     }
 
@@ -85,6 +108,7 @@ public class PostflopBettingSpotExtractorStateful
         _activePlayers = hand
             .Players.Select(player => player.PlayerId)
             .ToHashSet(StringComparer.Ordinal);
+        _potAmountBB = 0;
     }
 
     private record HandlerResult(bool IsValid)
