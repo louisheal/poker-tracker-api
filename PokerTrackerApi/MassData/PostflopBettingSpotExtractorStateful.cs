@@ -6,93 +6,111 @@ namespace PokerTrackerApi.MassData;
 
 public class PostflopBettingSpotExtractorStateful
 {
-    // metadata
-    private string _handId = string.Empty;
-    private string _heroPlayerId = string.Empty;
-
-    // all streets
-    private decimal _potAmountBB = 0m;
-    private PokerStreet _pokerStreet = PokerStreet.Preflop;
-    private PostflopActionSequence? _flopActionSequence;
-
-    // preflop
-    private HashSet<string> _activePlayers = [];
-    private int _preflopRaiseCount = 0;
-    private string? _pfrPlayerId;
-    private string? _defendingPlayerId;
-
-    // flop
-    private Rank? _flopHighCardRank;
-    private FlopTexture? _flopTexture;
-    private FlopRankTexture? _flopRankTexture;
-
-    public IEnumerable<PostflopBettingSpot> Extract(PokerHand hand)
+    public IReadOnlyList<PostflopBettingSpot> Extract(PokerHand hand)
     {
-        InitialiseState(hand);
-
+        var state = new ExtractorState(hand);
         var handEvents = hand.Events.OrderBy(handEvent => handEvent.Sequence);
+        var spots = new List<PostflopBettingSpot>();
 
         foreach (var handEvent in handEvents)
         {
-            var result = HandleHandEvent(handEvent);
+            var result = HandleHandEvent(state, handEvent);
             if (!result.IsValid)
             {
                 break;
             }
             if (result.Spot != null)
             {
-                yield return result.Spot;
+                spots.Add(result.Spot);
             }
         }
+
+        return spots;
     }
 
-    private HandlerResult HandleHandEvent(PokerHandEvent handEvent) =>
+    private HandlerResult HandleHandEvent(ExtractorState state, PokerHandEvent handEvent) =>
         handEvent switch
         {
             PokerHandSmallBlindPostEvent smallBlindPostEvent => HandleSmallBlindPostEvent(
+                state,
                 smallBlindPostEvent
             ),
             PokerHandBigBlindPostEvent bigBlindPostEvent => HandleBigBlindPostEvent(
+                state,
                 bigBlindPostEvent
             ),
-            PokerHandPlayerFoldEvent playerFoldEvent => HandlePlayerFoldEvent(playerFoldEvent),
-            PokerHandPlayerCheckEvent playerCheckEvent => HandlePlayerCheckEvent(playerCheckEvent),
-            PokerHandPlayerBetEvent playerBetEvent => HandlePlayerBetEvent(playerBetEvent),
-            PokerHandPlayerCallEvent playerCallEvent => HandlePlayerCallEvent(playerCallEvent),
-            PokerHandPlayerRaiseEvent playerRaiseEvent => HandlePlayerRaiseEvent(playerRaiseEvent),
-            PokerHandFlopDealtEvent flopDealtEvent => HandleFlopDealtEvent(flopDealtEvent),
-            PokerHandTurnDealtEvent turnDealtEvent => HandleTurnDealtEvent(turnDealtEvent),
-            PokerHandRiverDealtEvent riverDealtEvent => HandleRiverDealtEvent(riverDealtEvent),
+            PokerHandPlayerFoldEvent playerFoldEvent => HandlePlayerFoldEvent(
+                state,
+                playerFoldEvent
+            ),
+            PokerHandPlayerCheckEvent playerCheckEvent => HandlePlayerCheckEvent(
+                state,
+                playerCheckEvent
+            ),
+            PokerHandPlayerBetEvent playerBetEvent => HandlePlayerBetEvent(state, playerBetEvent),
+            PokerHandPlayerCallEvent playerCallEvent => HandlePlayerCallEvent(
+                state,
+                playerCallEvent
+            ),
+            PokerHandPlayerRaiseEvent playerRaiseEvent => HandlePlayerRaiseEvent(
+                state,
+                playerRaiseEvent
+            ),
+            PokerHandFlopDealtEvent flopDealtEvent => HandleFlopDealtEvent(state, flopDealtEvent),
+            PokerHandTurnDealtEvent turnDealtEvent => HandleTurnDealtEvent(state, turnDealtEvent),
+            PokerHandRiverDealtEvent riverDealtEvent => HandleRiverDealtEvent(
+                state,
+                riverDealtEvent
+            ),
             _ => throw new NotImplementedException(),
         };
 
     // TODO : increase line length limit
     // TODO : validate that this happens before any other actions
     private HandlerResult HandleSmallBlindPostEvent(
+        ExtractorState state,
         PokerHandSmallBlindPostEvent smallBlindPostEvent
     )
     {
-        _potAmountBB += smallBlindPostEvent.AmountBB;
+        state.PotAmountBB += smallBlindPostEvent.AmountBB;
         return HandlerResult.Valid;
     }
 
     // TODO : validate that this happens before any other actions
-    private HandlerResult HandleBigBlindPostEvent(PokerHandBigBlindPostEvent bigBlindPostEvent)
+    private HandlerResult HandleBigBlindPostEvent(
+        ExtractorState state,
+        PokerHandBigBlindPostEvent bigBlindPostEvent
+    )
     {
-        _potAmountBB += bigBlindPostEvent.AmountBB;
+        state.PotAmountBB += bigBlindPostEvent.AmountBB;
         return HandlerResult.Valid;
     }
 
-    private HandlerResult HandlePlayerFoldEvent(PokerHandPlayerFoldEvent playerFoldEvent)
+    private HandlerResult HandlePlayerFoldEvent(
+        ExtractorState state,
+        PokerHandPlayerFoldEvent playerFoldEvent
+    )
     {
-        _activePlayers.Remove(playerFoldEvent.PlayerId);
+        state.ActivePlayers.Remove(playerFoldEvent.PlayerId);
+
+        if (state.PokerStreet != PokerStreet.Preflop) { }
+
         return HandlerResult.Valid;
     }
 
-    private HandlerResult HandlePlayerCheckEvent(PokerHandPlayerCheckEvent playerCheckEvent)
+    private HandlerResult HandlePlayerCheckEvent(
+        ExtractorState state,
+        PokerHandPlayerCheckEvent playerCheckEvent
+    )
     {
         // skip hands where it limped through
-        if (_pokerStreet == PokerStreet.Preflop || _pfrPlayerId == null || _defendingPlayerId == null)
+        if (state.PokerStreet == PokerStreet.Preflop)
+        {
+            return HandlerResult.Invalid;
+        }
+
+        // TODO : move this logic into a Validate() method
+        if (state.PfrPlayerId == null || state.DefendingPlayerId == null)
         {
             return HandlerResult.Invalid;
         }
@@ -100,61 +118,78 @@ public class PostflopBettingSpotExtractorStateful
         // TODO : make generate spot method
         var spot = new PostflopBettingSpot
         {
-            HandId = _handId,
-            HeroPlayerId = _heroPlayerId,
-            // TODO : add some sort of Validate() method
-            // accepts a street and/or event and checks that the current state is valid
-            PfrPlayerId = _pfrPlayerId,
-            DefendingPlayerId = _defendingPlayerId,
-            Street = _pokerStreet,
-            FlopHighCard = _flopHighCardRank,
-            FlopTexture = _flopTexture,
-            FlopRankTexture = _flopRankTexture,
-            FlopActionSequence = _flopActionSequence,
+            HandId = state.HandId,
+            HeroPlayerId = state.HeroPlayerId,
+            PfrPlayerId = state.PfrPlayerId,
+            DefendingPlayerId = state.DefendingPlayerId,
+            Street = state.PokerStreet,
+            FlopHighCard = state.FlopHighCardRank,
+            FlopTexture = state.FlopTexture,
+            FlopRankTexture = state.FlopRankTexture,
+            FlopActionSequence = state.FlopActionSequence,
         };
 
         return HandlerResult.ValidWithSpot(spot);
     }
 
-    private HandlerResult HandlePlayerBetEvent(PokerHandPlayerBetEvent playerBetEvent)
+    private HandlerResult HandlePlayerBetEvent(
+        ExtractorState state,
+        PokerHandPlayerBetEvent playerBetEvent
+    )
     {
         // only valid actions preflop are Fold/Call/Raise
-        if (_pokerStreet == PokerStreet.Preflop)
+        if (state.PokerStreet == PokerStreet.Preflop)
         {
             return HandlerResult.Invalid;
         }
 
-        _potAmountBB += playerBetEvent.BetAmountBB;
+        state.PotAmountBB += playerBetEvent.BetAmountBB;
         return HandlerResult.Valid;
     }
 
-    private HandlerResult HandlePlayerCallEvent(PokerHandPlayerCallEvent playerCallEvent)
+    private HandlerResult HandlePlayerCallEvent(
+        ExtractorState state,
+        PokerHandPlayerCallEvent playerCallEvent
+    )
     {
-        _potAmountBB += playerCallEvent.CallAmountBB;
+        state.PotAmountBB += playerCallEvent.CallAmountBB;
         return HandlerResult.Valid;
     }
 
-    private HandlerResult HandlePlayerRaiseEvent(PokerHandPlayerRaiseEvent playerRaiseEvent)
+    private HandlerResult HandlePlayerRaiseEvent(
+        ExtractorState state,
+        PokerHandPlayerRaiseEvent playerRaiseEvent
+    )
     {
-        if (_pokerStreet == PokerStreet.Preflop)
+        if (state.PokerStreet == PokerStreet.Preflop)
         {
-            _preflopRaiseCount += 1;
-            _pfrPlayerId = playerRaiseEvent.PlayerId;
+            state.PreflopRaiseCount += 1;
+            state.PfrPlayerId = playerRaiseEvent.PlayerId;
         }
 
-        _potAmountBB += playerRaiseEvent.RaiseAmountBB;
+        state.PotAmountBB += playerRaiseEvent.RaiseAmountBB;
         return HandlerResult.Valid;
     }
 
     // TODO : potentially split into helpers
-    private HandlerResult HandleFlopDealtEvent(PokerHandFlopDealtEvent flopDealtEvent)
+    // they should exist in a separate static class to declutter this file
+    private HandlerResult HandleFlopDealtEvent(
+        ExtractorState state,
+        PokerHandFlopDealtEvent flopDealtEvent
+    )
     {
-        if (_activePlayers.Count != 2 || _pfrPlayerId == null || _defendingPlayerId == null)
+        if (state.ActivePlayers.Count != 2)
         {
             return HandlerResult.Invalid;
         }
 
-        _flopHighCardRank = new[]
+        // TODO : move this into Validate()
+        if (state.PfrPlayerId == null || !state.ActivePlayers.Contains(state.PfrPlayerId))
+        {
+            return HandlerResult.Invalid;
+        }
+
+        state.FlopHighCardRank = new[]
         {
             flopDealtEvent.First.Rank,
             flopDealtEvent.Second.Rank,
@@ -170,7 +205,7 @@ public class PostflopBettingSpotExtractorStateful
             .Distinct()
             .Count();
 
-        _flopTexture = distinctSuitCount switch
+        state.FlopTexture = distinctSuitCount switch
         {
             1 => FlopTexture.Monotone,
             2 => FlopTexture.TwoTone,
@@ -178,7 +213,7 @@ public class PostflopBettingSpotExtractorStateful
             _ => throw new InvalidOperationException("A flop must contain three cards."),
         };
 
-        _flopRankTexture = new[]
+        state.FlopRankTexture = new[]
         {
             flopDealtEvent.First.Rank,
             flopDealtEvent.Second.Rank,
@@ -193,36 +228,56 @@ public class PostflopBettingSpotExtractorStateful
             _ => throw new InvalidOperationException("A flop must contain three cards."),
         };
 
-        _defendingPlayerId = _activePlayers.Single(playerId => playerId != _pfrPlayerId);
-        _pokerStreet = PokerStreet.Flop;
+        state.DefendingPlayerId = state.ActivePlayers.Single(playerId =>
+            playerId != state.PfrPlayerId
+        );
+        state.PokerStreet = PokerStreet.Flop;
 
         return HandlerResult.Valid;
     }
 
-    private HandlerResult HandleTurnDealtEvent(PokerHandTurnDealtEvent turnDealtEvent)
+    private HandlerResult HandleTurnDealtEvent(
+        ExtractorState state,
+        PokerHandTurnDealtEvent turnDealtEvent
+    )
     {
-        _pokerStreet = PokerStreet.Turn;
+        state.PokerStreet = PokerStreet.Turn;
         return HandlerResult.Valid;
     }
 
-    private HandlerResult HandleRiverDealtEvent(PokerHandRiverDealtEvent riverDealtEvent)
+    private HandlerResult HandleRiverDealtEvent(
+        ExtractorState state,
+        PokerHandRiverDealtEvent riverDealtEvent
+    )
     {
-        _pokerStreet = PokerStreet.River;
+        state.PokerStreet = PokerStreet.River;
         return HandlerResult.Valid;
     }
 
-    private void InitialiseState(PokerHand hand)
+    // TODO : move into own file
+    private class ExtractorState
     {
-        _handId = hand.HandId;
-        _heroPlayerId = hand.HeroPlayerId;
+        public ExtractorState(PokerHand hand)
+        {
+            HandId = hand.HandId;
+            HeroPlayerId = hand.HeroPlayerId;
+            ActivePlayers = hand
+                .Players.Select(player => player.PlayerId)
+                .ToHashSet(StringComparer.Ordinal);
+        }
 
-        _pokerStreet = PokerStreet.Preflop;
-        _activePlayers = hand
-            .Players.Select(player => player.PlayerId)
-            .ToHashSet(StringComparer.Ordinal);
-        _potAmountBB = 0;
-        _preflopRaiseCount = 0;
-        _pfrPlayerId = null;
+        public string HandId { get; }
+        public string HeroPlayerId { get; }
+        public decimal PotAmountBB { get; set; }
+        public PokerStreet PokerStreet { get; set; } = PokerStreet.Preflop;
+        public PostflopActionSequence? FlopActionSequence { get; set; }
+        public HashSet<string> ActivePlayers { get; }
+        public int PreflopRaiseCount { get; set; }
+        public string? PfrPlayerId { get; set; }
+        public string? DefendingPlayerId { get; set; }
+        public Rank? FlopHighCardRank { get; set; }
+        public FlopTexture? FlopTexture { get; set; }
+        public FlopRankTexture? FlopRankTexture { get; set; }
     }
 
     private record HandlerResult(bool IsValid, PostflopBettingSpot? Spot)
