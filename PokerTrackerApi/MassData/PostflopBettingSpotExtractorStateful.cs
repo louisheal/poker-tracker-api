@@ -1,3 +1,4 @@
+using PokerTrackerApi.Domain;
 using PokerTrackerApi.Domain.PokerHand;
 using PokerTrackerApi.Domain.PokerHand.Events;
 
@@ -5,15 +6,27 @@ namespace PokerTrackerApi.MassData;
 
 public class PostflopBettingSpotExtractorStateful
 {
+    // metadata
     private string _handId = string.Empty;
     private string _heroPlayerId = string.Empty;
-    private PokerStreet _pokerStreet = PokerStreet.Preflop;
-    private HashSet<string> _activePlayers = [];
-    private decimal _potAmountBB = 0m;
-    private int _preflopRaiseCount = 0;
-    private string? _pfrPlayerId = null;
 
-    public IReadOnlyList<PostflopBettingSpot> Extract(PokerHand hand)
+    // all streets
+    private decimal _potAmountBB = 0m;
+    private PokerStreet _pokerStreet = PokerStreet.Preflop;
+    private PostflopActionSequence? _flopActionSequence;
+
+    // preflop
+    private HashSet<string> _activePlayers = [];
+    private int _preflopRaiseCount = 0;
+    private string? _pfrPlayerId;
+    private string? _defendingPlayerId;
+
+    // flop
+    private Rank? _flopHighCardRank;
+    private FlopTexture? _flopTexture;
+    private FlopRankTexture? _flopRankTexture;
+
+    public IEnumerable<PostflopBettingSpot> Extract(PokerHand hand)
     {
         InitialiseState(hand);
 
@@ -26,16 +39,22 @@ public class PostflopBettingSpotExtractorStateful
             {
                 break;
             }
+            if (result.Spot != null)
+            {
+                yield return result.Spot;
+            }
         }
-
-        return [];
     }
 
     private HandlerResult HandleHandEvent(PokerHandEvent handEvent) =>
         handEvent switch
         {
-            PokerHandSmallBlindPostEvent smallBlindPostEvent => HandleSmallBlindPostEvent(smallBlindPostEvent),
-            PokerHandBigBlindPostEvent bigBlindPostEvent => HandleBigBlindPostEvent(bigBlindPostEvent),
+            PokerHandSmallBlindPostEvent smallBlindPostEvent => HandleSmallBlindPostEvent(
+                smallBlindPostEvent
+            ),
+            PokerHandBigBlindPostEvent bigBlindPostEvent => HandleBigBlindPostEvent(
+                bigBlindPostEvent
+            ),
             PokerHandPlayerFoldEvent playerFoldEvent => HandlePlayerFoldEvent(playerFoldEvent),
             PokerHandPlayerCheckEvent playerCheckEvent => HandlePlayerCheckEvent(playerCheckEvent),
             PokerHandPlayerBetEvent playerBetEvent => HandlePlayerBetEvent(playerBetEvent),
@@ -73,20 +92,28 @@ public class PostflopBettingSpotExtractorStateful
     private HandlerResult HandlePlayerCheckEvent(PokerHandPlayerCheckEvent playerCheckEvent)
     {
         // skip hands where it limped through
-        if (_pokerStreet == PokerStreet.Preflop)
+        if (_pokerStreet == PokerStreet.Preflop || _pfrPlayerId == null || _defendingPlayerId == null)
         {
             return HandlerResult.Invalid;
         }
-        
+
         // TODO : make generate spot method
         var spot = new PostflopBettingSpot
         {
             HandId = _handId,
             HeroPlayerId = _heroPlayerId,
+            // TODO : add some sort of Validate() method
+            // accepts a street and/or event and checks that the current state is valid
+            PfrPlayerId = _pfrPlayerId,
+            DefendingPlayerId = _defendingPlayerId,
             Street = _pokerStreet,
+            FlopHighCard = _flopHighCardRank,
+            FlopTexture = _flopTexture,
+            FlopRankTexture = _flopRankTexture,
+            FlopActionSequence = _flopActionSequence,
         };
 
-        return HandlerResult.Valid;
+        return HandlerResult.ValidWithSpot(spot);
     }
 
     private HandlerResult HandlePlayerBetEvent(PokerHandPlayerBetEvent playerBetEvent)
@@ -119,20 +146,56 @@ public class PostflopBettingSpotExtractorStateful
         return HandlerResult.Valid;
     }
 
+    // TODO : potentially split into helpers
     private HandlerResult HandleFlopDealtEvent(PokerHandFlopDealtEvent flopDealtEvent)
     {
-        if (_activePlayers.Count() != 2)
+        if (_activePlayers.Count != 2 || _pfrPlayerId == null || _defendingPlayerId == null)
         {
-            // TODO : skip entire hand
-            // each handler could return a tuple (isValid, result)
-            // we can yield return result
-            // and break if not valid
-
-            // TODO : can we make this into a factory or something?
             return HandlerResult.Invalid;
         }
 
+        _flopHighCardRank = new[]
+        {
+            flopDealtEvent.First.Rank,
+            flopDealtEvent.Second.Rank,
+            flopDealtEvent.Third.Rank,
+        }.Max();
+
+        var distinctSuitCount = new[]
+        {
+            flopDealtEvent.First.Suit,
+            flopDealtEvent.Second.Suit,
+            flopDealtEvent.Third.Suit,
+        }
+            .Distinct()
+            .Count();
+
+        _flopTexture = distinctSuitCount switch
+        {
+            1 => FlopTexture.Monotone,
+            2 => FlopTexture.TwoTone,
+            3 => FlopTexture.Rainbow,
+            _ => throw new InvalidOperationException("A flop must contain three cards."),
+        };
+
+        _flopRankTexture = new[]
+        {
+            flopDealtEvent.First.Rank,
+            flopDealtEvent.Second.Rank,
+            flopDealtEvent.Third.Rank,
+        }
+            .Distinct()
+            .Count() switch
+        {
+            1 => FlopRankTexture.Trips,
+            2 => FlopRankTexture.Paired,
+            3 => FlopRankTexture.Unpaired,
+            _ => throw new InvalidOperationException("A flop must contain three cards."),
+        };
+
+        _defendingPlayerId = _activePlayers.Single(playerId => playerId != _pfrPlayerId);
         _pokerStreet = PokerStreet.Flop;
+
         return HandlerResult.Valid;
     }
 
@@ -162,9 +225,11 @@ public class PostflopBettingSpotExtractorStateful
         _pfrPlayerId = null;
     }
 
-    private record HandlerResult(bool IsValid)
+    private record HandlerResult(bool IsValid, PostflopBettingSpot? Spot)
     {
-        public static HandlerResult Valid = new(true);
-        public static HandlerResult Invalid = new(false);
+        public static HandlerResult Valid = new(true, null);
+        public static HandlerResult Invalid = new(false, null);
+
+        public static HandlerResult ValidWithSpot(PostflopBettingSpot spot) => new(true, spot);
     }
 }
