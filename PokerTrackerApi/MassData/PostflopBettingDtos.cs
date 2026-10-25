@@ -17,6 +17,7 @@ public record PostflopBetResponseBucketDto(
 public record PostflopBetResponseBucketsDto(IReadOnlyList<PostflopBetResponseBucketDto> Buckets);
 
 public record PostflopActionFrequencyDto(
+    string Line,
     string DecisionContext,
     string ActorRole,
     string Action,

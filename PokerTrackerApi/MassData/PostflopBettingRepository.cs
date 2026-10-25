@@ -7,6 +7,21 @@ namespace PokerTrackerApi.MassData;
 
 public class PostflopBettingRepository : IPostflopBettingRepository
 {
+    private static readonly string[] FoldEquityLines = ["BF", "XBF", "BRF", "XBRF"];
+
+    private static readonly string[] FoldEquityDecisionContexts = ["B", "XB", "BR", "XBR"];
+
+    private static readonly IReadOnlyDictionary<string, string> FoldEquityLinesByContext = new Dictionary<
+        string,
+        string
+    >
+    {
+        ["B"] = "BF",
+        ["XB"] = "XBF",
+        ["BR"] = "BRF",
+        ["XBR"] = "XBRF",
+    };
+
     private static readonly int[] ResponseBucketThresholds = Enumerable
         .Range(1, 30)
         .Select(value => value * 10)
@@ -57,27 +72,11 @@ public class PostflopBettingRepository : IPostflopBettingRepository
         }
 
         var streetSpots = spots.Where(spot => spot.Street == street);
-        if (street == PokerStreet.River && riverBetSizeCategory.HasValue)
-        {
-            streetSpots = riverBetSizeCategory.Value switch
-            {
-                PostflopRiverBetSizeCategory.Small => streetSpots.Where(spot =>
-                    spot.BetToPotRatio < 0.4m
-                ),
-                PostflopRiverBetSizeCategory.Medium => streetSpots.Where(spot =>
-                    spot.BetToPotRatio >= 0.4m && spot.BetToPotRatio < 0.7m
-                ),
-                PostflopRiverBetSizeCategory.Large => streetSpots.Where(spot =>
-                    spot.BetToPotRatio >= 0.7m && spot.BetToPotRatio <= 1m
-                ),
-                PostflopRiverBetSizeCategory.Overbet => streetSpots.Where(spot =>
-                    spot.BetToPotRatio > 1m
-                ),
-                _ => streetSpots,
-            };
-        }
-
-        return await AggregateBetResponseBucketsAsync(streetSpots, street, cancellationToken);
+        return await AggregateBetResponseBucketsAsync(
+            streetSpots,
+            street == PokerStreet.River ? riverBetSizeCategory : null,
+            cancellationToken
+        );
     }
 
     public async Task<PostflopActionFrequenciesDto> GetActionFrequenciesAsync(
@@ -158,6 +157,7 @@ public class PostflopBettingRepository : IPostflopBettingRepository
                     {
                         var actionCount = group.Count(action => action.Action == actionType);
                         return new PostflopActionFrequencyDto(
+                            GetActionPath(group.Key.DecisionContext, actionType),
                             group.Key.DecisionContext,
                             group.Key.ActorIsPfr ? "Pfr" : "Defender",
                             actionType.ToString(),
@@ -283,37 +283,71 @@ public class PostflopBettingRepository : IPostflopBettingRepository
             _ => throw new ArgumentOutOfRangeException(nameof(potType), potType, null),
         };
 
+    private static string GetActionPath(string decisionContext, PostflopActionType actionType) =>
+        decisionContext
+        + (actionType switch
+        {
+            PostflopActionType.Check => "X",
+            PostflopActionType.Bet => "B",
+            PostflopActionType.Raise => "R",
+            PostflopActionType.Call => "C",
+            PostflopActionType.Fold => "F",
+            _ => throw new ArgumentOutOfRangeException(nameof(actionType), actionType, null),
+        });
+
     private static async Task<PostflopBetResponseBucketsDto> AggregateBetResponseBucketsAsync(
         IQueryable<PostflopBettingSpot> spots,
-        PokerStreet street,
+        PostflopRiverBetSizeCategory? riverBetSizeCategory,
         CancellationToken cancellationToken
     )
     {
-        var responses = await spots
+        var decisionContexts = FoldEquityDecisionContexts;
+        var aggressivePaths = FoldEquityDecisionContexts;
+        var relevantSpots = await spots
             .Where(spot =>
-                spot.Street == street
-                && spot.ResponseTo.HasValue
-                && spot.ResponseAction.HasValue
-                && spot.BetResponseLine.HasValue
+                spot.ActorPlayerId != string.Empty
+                && (
+                    decisionContexts.Contains(spot.DecisionContext)
+                    || aggressivePaths.Contains(spot.ActionPath)
+                )
             )
             .Select(spot => new
             {
-                ResponderIsHero = spot.ResponseTo == PostflopResponseTo.PfrBet
-                    ? spot.HeroPlayerId == spot.DefendingPlayerId
-                    : spot.HeroPlayerId == spot.PfrPlayerId,
-                Line = spot.BetResponseLine!.Value,
-                Action = spot.ResponseAction!.Value,
-                spot.BetToPotRatio,
+                spot.HandId,
+                spot.ActionPath,
+                spot.DecisionContext,
+                spot.ActorPlayerId,
+                spot.HeroPlayerId,
+                spot.Action,
+                spot.ActionSizeToPotRatio,
             })
             .ToArrayAsync(cancellationToken);
 
-        var populationResponses = responses
-            .Where(response => !response.ResponderIsHero)
-            .Select(response => new PostflopBetResponseObservation(
-                response.Line,
-                response.Action,
-                response.BetToPotRatio
-            ));
+        var aggressiveActionSizes = relevantSpots
+            .Where(spot => aggressivePaths.Contains(spot.ActionPath))
+            .ToDictionary(
+                spot => (spot.HandId, spot.ActionPath),
+                spot => spot.ActionSizeToPotRatio
+            );
+
+        var populationResponses = relevantSpots
+            .Where(spot =>
+                decisionContexts.Contains(spot.DecisionContext)
+                && !string.Equals(spot.ActorPlayerId, spot.HeroPlayerId, StringComparison.Ordinal)
+                && spot.Action.HasValue
+                && aggressiveActionSizes.ContainsKey((spot.HandId, spot.DecisionContext))
+                && MatchesRiverBetSizeCategory(
+                    aggressiveActionSizes[(spot.HandId, spot.DecisionContext)],
+                    riverBetSizeCategory
+                )
+            )
+            .Select(spot =>
+                new PostflopBetResponseObservation(
+                    FoldEquityLinesByContext[spot.DecisionContext],
+                    spot.Action!.Value,
+                    aggressiveActionSizes[(spot.HandId, spot.DecisionContext)]
+                )
+            );
 
         return new(AggregateResponseBuckets(populationResponses));
     }
@@ -322,7 +356,7 @@ public class PostflopBettingRepository : IPostflopBettingRepository
         IEnumerable<PostflopBetResponseObservation> observations
     )
     {
-        var countsByLine = Enum.GetValues<PostflopBetResponseLine>()
+        var countsByLine = FoldEquityLines
             .ToDictionary(
                 line => line,
                 _ =>
@@ -355,14 +389,14 @@ public class PostflopBettingRepository : IPostflopBettingRepository
                 }
 
                 counts.Opportunities[thresholdIndex]++;
-                if (observation.Action == PostflopResponseAction.Fold)
+                if (observation.Action == PostflopActionType.Fold)
                 {
                     counts.Folds[thresholdIndex]++;
                 }
             }
         }
 
-        return Enum.GetValues<PostflopBetResponseLine>()
+        return FoldEquityLines
             .SelectMany(line =>
                 ResponseBucketThresholds.Select(
                     (threshold, index) =>
@@ -381,8 +415,22 @@ public class PostflopBettingRepository : IPostflopBettingRepository
     }
 
     private record PostflopBetResponseObservation(
-        PostflopBetResponseLine Line,
-        PostflopResponseAction Action,
+        string Line,
+        PostflopActionType Action,
         decimal? BetToPotRatio
     );
+
+    private static bool MatchesRiverBetSizeCategory(
+        decimal? betToPotRatio,
+        PostflopRiverBetSizeCategory? category
+    ) =>
+        !category.HasValue
+        || (category.Value switch
+        {
+            PostflopRiverBetSizeCategory.Small => betToPotRatio < 0.4m,
+            PostflopRiverBetSizeCategory.Medium => betToPotRatio >= 0.4m && betToPotRatio < 0.7m,
+            PostflopRiverBetSizeCategory.Large => betToPotRatio >= 0.7m && betToPotRatio <= 1m,
+            PostflopRiverBetSizeCategory.Overbet => betToPotRatio > 1m,
+            _ => true,
+        });
 }
