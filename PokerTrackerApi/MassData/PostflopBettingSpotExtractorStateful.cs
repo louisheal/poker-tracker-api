@@ -31,6 +31,12 @@ public class PostflopBettingSpotExtractorStateful
                 case PokerHandPlayerBetEvent playerBetEvent:
                     HandlePlayerBetEvent(playerBetEvent);
                     break;
+                case PokerHandPlayerCallEvent playerCallEvent:
+                    HandlePlayerCallEvent(playerCallEvent);
+                    break;
+                case PokerHandPlayerRaiseEvent playerRaiseEvent:
+                    HandlePlayerRaiseEvent(playerRaiseEvent);
+                    break;
                 case PokerHandFlopDealtEvent flopDealtEvent:
                     HandleFlopDealtEvent(flopDealtEvent);
                     break;
@@ -70,6 +76,18 @@ public class PostflopBettingSpotExtractorStateful
     private HandlerResult HandlePlayerBetEvent(PokerHandPlayerBetEvent playerBetEvent)
     {
         _potAmountBB += playerBetEvent.BetAmountBB;
+        return HandlerResult.Valid;
+    }
+
+    private HandlerResult HandlePlayerCallEvent(PokerHandPlayerCallEvent playerCallEvent)
+    {
+        _potAmountBB += playerCallEvent.CallAmountBB;
+        return HandlerResult.Valid;
+    }
+
+    private HandlerResult HandlePlayerRaiseEvent(PokerHandPlayerRaiseEvent playerRaiseEvent)
+    {
+        _potAmountBB += playerRaiseEvent.RaiseAmountBB;
         return HandlerResult.Valid;
     }
 
