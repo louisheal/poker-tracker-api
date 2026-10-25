@@ -302,13 +302,13 @@ public class PostflopBettingRepository : IPostflopBettingRepository
     )
     {
         var decisionContexts = FoldEquityDecisionContexts;
-        var aggressivePaths = FoldEquityLines;
+        var aggressionActionPaths = FoldEquityDecisionContexts;
         var relevantSpots = await spots
             .Where(spot =>
                 spot.ActorPlayerId != string.Empty
                 && (
                     Enumerable.Contains(decisionContexts, spot.DecisionContext)
-                    || Enumerable.Contains(aggressivePaths, spot.ActionPath)
+                    || Enumerable.Contains(aggressionActionPaths, spot.ActionPath)
                 )
             )
             .Select(spot => new
@@ -324,7 +324,7 @@ public class PostflopBettingRepository : IPostflopBettingRepository
             .ToArrayAsync(cancellationToken);
 
         var aggressiveActionSizes = relevantSpots
-            .Where(spot => aggressivePaths.Contains(spot.ActionPath))
+            .Where(spot => aggressionActionPaths.Contains(spot.ActionPath))
             .ToDictionary(
                 spot => (spot.HandId, spot.ActionPath),
                 spot => spot.ActionSizeToPotRatio
