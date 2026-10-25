@@ -19,40 +19,31 @@ public class PostflopBettingSpotExtractorStateful
 
         foreach (var handEvent in handEvents)
         {
-            switch (handEvent)
+            var result = HandleHandEvent(handEvent);
+            if (!result.IsValid)
             {
-                case PokerHandSmallBlindPostEvent smallBlindPostEvent:
-                    HandleSmallBlindPostEvent(smallBlindPostEvent);
-                    break;
-                case PokerHandBigBlindPostEvent bigBlindPostEvent:
-                    HandleBigBlindPostEvent(bigBlindPostEvent);
-                    break;
-                case PokerHandPlayerFoldEvent playerFoldEvent:
-                    HandlePlayerFoldEvent(playerFoldEvent);
-                    break;
-                case PokerHandPlayerBetEvent playerBetEvent:
-                    HandlePlayerBetEvent(playerBetEvent);
-                    break;
-                case PokerHandPlayerCallEvent playerCallEvent:
-                    HandlePlayerCallEvent(playerCallEvent);
-                    break;
-                case PokerHandPlayerRaiseEvent playerRaiseEvent:
-                    HandlePlayerRaiseEvent(playerRaiseEvent);
-                    break;
-                case PokerHandFlopDealtEvent flopDealtEvent:
-                    HandleFlopDealtEvent(flopDealtEvent);
-                    break;
-                case PokerHandTurnDealtEvent turnDealtEvent:
-                    HandleTurnDealtEvent(turnDealtEvent);
-                    break;
-                case PokerHandRiverDealtEvent riverDealtEvent:
-                    HandleRiverDealtEvent(riverDealtEvent);
-                    break;
+                break;
             }
         }
 
         return [];
     }
+
+    private HandlerResult HandleHandEvent(PokerHandEvent handEvent) =>
+        handEvent switch
+        {
+            PokerHandSmallBlindPostEvent smallBlindPostEvent => HandleSmallBlindPostEvent(smallBlindPostEvent),
+            PokerHandBigBlindPostEvent bigBlindPostEvent => HandleBigBlindPostEvent(bigBlindPostEvent),
+            PokerHandPlayerFoldEvent playerFoldEvent => HandlePlayerFoldEvent(playerFoldEvent),
+            PokerHandPlayerCheckEvent playerCheckEvent => HandlePlayerCheckEvent(playerCheckEvent),
+            PokerHandPlayerBetEvent playerBetEvent => HandlePlayerBetEvent(playerBetEvent),
+            PokerHandPlayerCallEvent playerCallEvent => HandlePlayerCallEvent(playerCallEvent),
+            PokerHandPlayerRaiseEvent playerRaiseEvent => HandlePlayerRaiseEvent(playerRaiseEvent),
+            PokerHandFlopDealtEvent flopDealtEvent => HandleFlopDealtEvent(flopDealtEvent),
+            PokerHandTurnDealtEvent turnDealtEvent => HandleTurnDealtEvent(turnDealtEvent),
+            PokerHandRiverDealtEvent riverDealtEvent => HandleRiverDealtEvent(riverDealtEvent),
+            _ => throw new NotImplementedException(),
+        };
 
     // TODO : increase line length limit
     // TODO : validate that this happens before any other actions
@@ -74,6 +65,11 @@ public class PostflopBettingSpotExtractorStateful
     private HandlerResult HandlePlayerFoldEvent(PokerHandPlayerFoldEvent playerFoldEvent)
     {
         _activePlayers.Remove(playerFoldEvent.PlayerId);
+        return HandlerResult.Valid;
+    }
+
+    private HandlerResult HandlePlayerCheckEvent(PokerHandPlayerCheckEvent playerCheckEvent)
+    {
         return HandlerResult.Valid;
     }
 
