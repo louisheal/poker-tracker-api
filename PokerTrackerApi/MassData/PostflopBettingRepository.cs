@@ -302,13 +302,13 @@ public class PostflopBettingRepository : IPostflopBettingRepository
     )
     {
         var decisionContexts = FoldEquityDecisionContexts;
-        var aggressivePaths = FoldEquityDecisionContexts;
+        var aggressivePaths = FoldEquityLines;
         var relevantSpots = await spots
             .Where(spot =>
                 spot.ActorPlayerId != string.Empty
                 && (
-                    decisionContexts.Contains(spot.DecisionContext)
-                    || aggressivePaths.Contains(spot.ActionPath)
+                    Enumerable.Contains(decisionContexts, spot.DecisionContext)
+                    || Enumerable.Contains(aggressivePaths, spot.ActionPath)
                 )
             )
             .Select(spot => new
