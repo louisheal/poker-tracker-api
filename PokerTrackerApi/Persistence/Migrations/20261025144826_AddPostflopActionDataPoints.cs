@@ -10,6 +10,12 @@ public partial class AddPostflopActionDataPoints : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.CreateIndex(
+            name: "IX_PostflopBettingSpots_HandId",
+            table: "PostflopBettingSpots",
+            column: "HandId"
+        );
+
         migrationBuilder.DropPrimaryKey(
             name: "PK_PostflopBettingSpots",
             table: "PostflopBettingSpots"
@@ -92,11 +98,22 @@ public partial class AddPostflopActionDataPoints : Migration
             table: "PostflopBettingSpots",
             columns: new[] { "Street", "DecisionContext" }
         );
+
+        migrationBuilder.DropIndex(
+            name: "IX_PostflopBettingSpots_HandId",
+            table: "PostflopBettingSpots"
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.CreateIndex(
+            name: "IX_PostflopBettingSpots_HandId",
+            table: "PostflopBettingSpots",
+            column: "HandId"
+        );
+
         migrationBuilder.DropPrimaryKey(
             name: "PK_PostflopBettingSpots",
             table: "PostflopBettingSpots"
@@ -128,6 +145,11 @@ public partial class AddPostflopActionDataPoints : Migration
             name: "PK_PostflopBettingSpots",
             table: "PostflopBettingSpots",
             columns: new[] { "HandId", "Street" }
+        );
+
+        migrationBuilder.DropIndex(
+            name: "IX_PostflopBettingSpots_HandId",
+            table: "PostflopBettingSpots"
         );
     }
 }
