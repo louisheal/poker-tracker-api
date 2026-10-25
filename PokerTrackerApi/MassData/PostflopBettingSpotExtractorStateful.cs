@@ -5,6 +5,8 @@ namespace PokerTrackerApi.MassData;
 
 public class PostflopBettingSpotExtractorStateful
 {
+    private string _handId = string.Empty;
+    private string _heroPlayerId = string.Empty;
     private PokerStreet _pokerStreet = PokerStreet.Preflop;
     private HashSet<string> _activePlayers = [];
     private decimal _potAmountBB = 0m;
@@ -70,12 +72,26 @@ public class PostflopBettingSpotExtractorStateful
 
     private HandlerResult HandlePlayerCheckEvent(PokerHandPlayerCheckEvent playerCheckEvent)
     {
+        // skip hands where it limped through
+        if (_pokerStreet == PokerStreet.Preflop)
+        {
+            return HandlerResult.Invalid;
+        }
+        
+        // TODO : make generate spot method
+        var spot = new PostflopBettingSpot
+        {
+            HandId = _handId,
+            HeroPlayerId = _heroPlayerId,
+            Street = _pokerStreet,
+        };
+
         return HandlerResult.Valid;
     }
 
     private HandlerResult HandlePlayerBetEvent(PokerHandPlayerBetEvent playerBetEvent)
     {
-        // not a valid action preflop - only valid actions are Fold/Call/Raise
+        // only valid actions preflop are Fold/Call/Raise
         if (_pokerStreet == PokerStreet.Preflop)
         {
             return HandlerResult.Invalid;
@@ -134,6 +150,9 @@ public class PostflopBettingSpotExtractorStateful
 
     private void InitialiseState(PokerHand hand)
     {
+        _handId = hand.HandId;
+        _heroPlayerId = hand.HeroPlayerId;
+
         _pokerStreet = PokerStreet.Preflop;
         _activePlayers = hand
             .Players.Select(player => player.PlayerId)
