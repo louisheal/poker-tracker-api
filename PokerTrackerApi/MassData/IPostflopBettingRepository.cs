@@ -20,4 +20,21 @@ public interface IPostflopBettingRepository
         PostflopRiverBetSizeCategory? riverBetSizeCategory,
         CancellationToken cancellationToken
     );
+
+    Task<PostflopActionFrequenciesDto> GetActionFrequenciesAsync(
+        PokerStreet street,
+        bool? pfrInPosition,
+        PokerPosition? ipPosition,
+        PokerPosition? oopPosition,
+        Rank? flopHighCard,
+        IReadOnlyCollection<FlopTexture>? flopTextures,
+        IReadOnlyCollection<PostflopPotType>? potTypes,
+        IReadOnlyCollection<PostflopActionSequence>? flopActionSequences,
+        IReadOnlyCollection<FlopRankTexture>? flopRankTextures,
+        IReadOnlyCollection<PostflopActionSequence>? turnActionSequences,
+        IReadOnlyCollection<PostflopRunout>? turnRunouts,
+        IReadOnlyCollection<PostflopRunout>? riverRunouts,
+        string? decisionContext,
+        CancellationToken cancellationToken
+    );
 }

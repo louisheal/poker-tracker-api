@@ -307,6 +307,27 @@ namespace PokerTrackerApi.Persistence.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("varchar(16)");
 
+                    b.Property<int>("ActionOrdinal")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Action")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("ActionPath")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<decimal?>("ActionSizeToPotRatio")
+                        .HasPrecision(12, 6)
+                        .HasColumnType("decimal(12,6)");
+
+                    b.Property<string>("ActorPlayerId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
                     b.Property<string>("BetResponseLine")
                         .HasMaxLength(8)
                         .HasColumnType("varchar(8)");
@@ -314,6 +335,11 @@ namespace PokerTrackerApi.Persistence.Migrations
                     b.Property<decimal?>("BetToPotRatio")
                         .HasPrecision(12, 6)
                         .HasColumnType("decimal(12,6)");
+
+                    b.Property<string>("DecisionContext")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
 
                     b.Property<string>("DefendingPlayerId")
                         .IsRequired()
@@ -382,7 +408,11 @@ namespace PokerTrackerApi.Persistence.Migrations
                         .HasMaxLength(24)
                         .HasColumnType("varchar(24)");
 
-                    b.HasKey("HandId", "Street");
+                    b.HasKey("HandId", "Street", "ActionOrdinal");
+
+                    b.HasIndex("Street", "Action");
+
+                    b.HasIndex("Street", "DecisionContext");
 
                     b.HasIndex("Street", "FlopActionSequence");
 

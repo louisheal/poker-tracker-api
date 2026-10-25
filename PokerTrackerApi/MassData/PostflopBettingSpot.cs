@@ -10,6 +10,15 @@ public enum PostflopResponseAction
     Raise,
 }
 
+public enum PostflopActionType
+{
+    Check,
+    Bet,
+    Raise,
+    Call,
+    Fold,
+}
+
 public enum PostflopResponseTo
 {
     PfrBet,
@@ -38,6 +47,7 @@ public enum PostflopActionSequence
     XX,
     XBC,
     XBRC,
+    BRC,
     BC,
 }
 
@@ -68,7 +78,17 @@ public class PostflopBettingSpot
 {
     public required string HandId { get; init; }
 
+    public int ActionOrdinal { get; init; }
+
     public required string HeroPlayerId { get; init; }
+
+    public required string ActorPlayerId { get; init; }
+
+    public required string ActionPath { get; init; }
+
+    public required string DecisionContext { get; init; }
+
+    public PostflopActionType? Action { get; init; }
 
     public PokerStreet Street { get; init; }
 
@@ -106,4 +126,6 @@ public class PostflopBettingSpot
     public PostflopBetResponseLine? BetResponseLine { get; init; }
 
     public decimal? BetToPotRatio { get; init; }
+
+    public decimal? ActionSizeToPotRatio { get; init; }
 }

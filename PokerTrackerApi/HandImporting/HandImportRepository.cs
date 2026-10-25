@@ -44,7 +44,9 @@ public class HandImportRepository : IHandImportRepository
         _dbContext.RawHands.Add(new RawHand { HandId = pokerHand.HandId, RawText = rawText });
         _dbContext.PokerHands.Add(pokerHand);
         _dbContext.PreflopSpots.AddRange(pokerHand.ToPreflopSpots());
-        _dbContext.PostflopBettingSpots.AddRange(PostflopBettingSpotExtractor.Extract(pokerHand));
+        _dbContext.PostflopBettingSpots.AddRange(
+            new PostflopBettingSpotExtractor().Extract(pokerHand)
+        );
         try
         {
             await _dbContext.SaveChangesAsync(cancellationToken);

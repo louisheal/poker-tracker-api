@@ -245,9 +245,18 @@ public class PokerTrackerDbContext : DbContext
 
         modelBuilder.Entity<PostflopBettingSpot>(entity =>
         {
-            entity.HasKey(spot => new { spot.HandId, spot.Street });
+            entity.HasKey(spot => new
+            {
+                spot.HandId,
+                spot.Street,
+                spot.ActionOrdinal,
+            });
             entity.Property(spot => spot.HandId).HasMaxLength(32);
             entity.Property(spot => spot.HeroPlayerId).HasMaxLength(255).IsRequired();
+            entity.Property(spot => spot.ActorPlayerId).HasMaxLength(255).IsRequired();
+            entity.Property(spot => spot.ActionPath).HasMaxLength(64).IsRequired();
+            entity.Property(spot => spot.DecisionContext).HasMaxLength(64).IsRequired();
+            entity.Property(spot => spot.Action).HasConversion<string>().HasMaxLength(16);
             entity.Property(spot => spot.PfrPlayerId).HasMaxLength(255).IsRequired();
             entity.Property(spot => spot.DefendingPlayerId).HasMaxLength(255).IsRequired();
             entity.Property(spot => spot.Street).HasConversion<string>().HasMaxLength(16);
@@ -270,6 +279,9 @@ public class PokerTrackerDbContext : DbContext
             entity.Property(spot => spot.ResponseTo).HasConversion<string>().HasMaxLength(16);
             entity.Property(spot => spot.ResponseAction).HasConversion<string>().HasMaxLength(16);
             entity.Property(spot => spot.BetToPotRatio).HasPrecision(12, 6);
+            entity.Property(spot => spot.ActionSizeToPotRatio).HasPrecision(12, 6);
+            entity.HasIndex(spot => new { spot.Street, spot.DecisionContext });
+            entity.HasIndex(spot => new { spot.Street, spot.Action });
             entity.HasIndex(spot => new { spot.Street, spot.FlopHighCard });
             entity.HasIndex(spot => new { spot.Street, spot.FlopTexture });
             entity.HasIndex(spot => new { spot.Street, spot.FlopActionSequence });

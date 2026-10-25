@@ -57,6 +57,44 @@ public class PostflopBettingController : ControllerBase
                 )
             );
 
+    [HttpGet("postflop-betting/{street}/action-frequencies")]
+    public async Task<ActionResult<PostflopActionFrequenciesDto>> GetActionFrequencies(
+        [FromRoute] PokerStreet street,
+        [FromQuery] bool? pfrInPosition,
+        [FromQuery] PokerPosition? ipPosition,
+        [FromQuery] PokerPosition? oopPosition,
+        [FromQuery] Rank? flopHighCard,
+        [FromQuery] List<FlopTexture>? flopTextures,
+        [FromQuery] List<PostflopPotType>? potTypes,
+        [FromQuery] List<PostflopActionSequence>? flopActionSequences,
+        [FromQuery] List<FlopRankTexture>? flopRankTextures,
+        [FromQuery] List<PostflopActionSequence>? turnActionSequences,
+        [FromQuery] List<PostflopRunout>? turnRunouts,
+        [FromQuery] List<PostflopRunout>? riverRunouts,
+        [FromQuery] string? decisionContext,
+        CancellationToken cancellationToken
+    ) =>
+        street == PokerStreet.Preflop
+            ? BadRequest("Action frequencies are available for Flop, Turn, and River.")
+            : Ok(
+                await _repository.GetActionFrequenciesAsync(
+                    street,
+                    pfrInPosition,
+                    ipPosition,
+                    oopPosition,
+                    flopHighCard,
+                    flopTextures,
+                    potTypes,
+                    flopActionSequences,
+                    flopRankTextures,
+                    turnActionSequences,
+                    turnRunouts,
+                    riverRunouts,
+                    decisionContext,
+                    cancellationToken
+                )
+            );
+
     [HttpPost("reprocess")]
     public async Task<ActionResult<MassDataReprocessingJobDto>> Reprocess(
         CancellationToken cancellationToken

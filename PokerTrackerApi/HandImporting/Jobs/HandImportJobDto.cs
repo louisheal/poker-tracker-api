@@ -22,4 +22,3 @@ public record HandImportJobFileDto(
     int InvalidHands,
     string? ErrorMessage
 );
-

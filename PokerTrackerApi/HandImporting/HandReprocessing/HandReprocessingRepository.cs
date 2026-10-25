@@ -66,9 +66,8 @@ public class HandReprocessingRepository : IHandReprocessingRepository
 
         var handIds = pokerHands.Select(hand => hand.HandId).ToArray();
         var preflopSpots = pokerHands.SelectMany(hand => hand.ToPreflopSpots()).ToArray();
-        var postflopBettingSpots = pokerHands
-            .SelectMany(PostflopBettingSpotExtractor.Extract)
-            .ToArray();
+        var postflopExtractor = new PostflopBettingSpotExtractor();
+        var postflopBettingSpots = pokerHands.SelectMany(postflopExtractor.Extract).ToArray();
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(
             cancellationToken

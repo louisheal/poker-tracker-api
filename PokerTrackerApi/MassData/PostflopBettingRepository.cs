@@ -7,6 +7,11 @@ namespace PokerTrackerApi.MassData;
 
 public class PostflopBettingRepository : IPostflopBettingRepository
 {
+    private static readonly int[] ResponseBucketThresholds = Enumerable
+        .Range(1, 30)
+        .Select(value => value * 10)
+        .ToArray();
+
     private readonly PokerTrackerDbContext _dbContext;
 
     public PostflopBettingRepository(PokerTrackerDbContext dbContext)
@@ -73,6 +78,97 @@ public class PostflopBettingRepository : IPostflopBettingRepository
         }
 
         return await AggregateBetResponseBucketsAsync(streetSpots, street, cancellationToken);
+    }
+
+    public async Task<PostflopActionFrequenciesDto> GetActionFrequenciesAsync(
+        PokerStreet street,
+        bool? pfrInPosition,
+        PokerPosition? ipPosition,
+        PokerPosition? oopPosition,
+        Rank? flopHighCard,
+        IReadOnlyCollection<FlopTexture>? flopTextures,
+        IReadOnlyCollection<PostflopPotType>? potTypes,
+        IReadOnlyCollection<PostflopActionSequence>? flopActionSequences,
+        IReadOnlyCollection<FlopRankTexture>? flopRankTextures,
+        IReadOnlyCollection<PostflopActionSequence>? turnActionSequences,
+        IReadOnlyCollection<PostflopRunout>? turnRunouts,
+        IReadOnlyCollection<PostflopRunout>? riverRunouts,
+        string? decisionContext,
+        CancellationToken cancellationToken
+    )
+    {
+        if (street == PokerStreet.Preflop)
+        {
+            throw new ArgumentOutOfRangeException(nameof(street), street, null);
+        }
+
+        var spots = ApplyFilters(
+            _dbContext.PostflopBettingSpots.AsNoTracking(),
+            pfrInPosition,
+            ipPosition,
+            oopPosition,
+            flopHighCard,
+            flopTextures,
+            potTypes,
+            flopActionSequences,
+            flopRankTextures,
+            turnActionSequences,
+            turnRunouts,
+            riverRunouts
+        );
+
+        var actions = await spots
+            .Where(spot =>
+                spot.Street == street
+                && spot.ActorPlayerId != string.Empty
+                && (decisionContext == null || spot.DecisionContext == decisionContext)
+            )
+            .Select(spot => new
+            {
+                spot.DecisionContext,
+                spot.ActorPlayerId,
+                spot.HeroPlayerId,
+                spot.PfrPlayerId,
+                spot.Action,
+            })
+            .ToArrayAsync(cancellationToken);
+
+        var populationActions = actions
+            .Where(action =>
+                !string.Equals(action.ActorPlayerId, action.HeroPlayerId, StringComparison.Ordinal)
+            )
+            .Select(action => new
+            {
+                action.DecisionContext,
+                ActorIsPfr = string.Equals(
+                    action.ActorPlayerId,
+                    action.PfrPlayerId,
+                    StringComparison.Ordinal
+                ),
+                action.Action,
+            });
+
+        var frequencies = populationActions
+            .GroupBy(action => new { action.DecisionContext, action.ActorIsPfr })
+            .OrderBy(group => group.Key.DecisionContext)
+            .ThenBy(group => group.Key.ActorIsPfr)
+            .SelectMany(group =>
+                Enum.GetValues<PostflopActionType>()
+                    .Select(actionType =>
+                    {
+                        var actionCount = group.Count(action => action.Action == actionType);
+                        return new PostflopActionFrequencyDto(
+                            group.Key.DecisionContext,
+                            group.Key.ActorIsPfr ? "Pfr" : "Defender",
+                            actionType.ToString(),
+                            actionCount,
+                            group.Count()
+                        );
+                    })
+            )
+            .ToArray();
+
+        return new PostflopActionFrequenciesDto(frequencies);
     }
 
     private static IQueryable<PostflopBettingSpot> ApplyFilters(
@@ -219,6 +315,74 @@ public class PostflopBettingRepository : IPostflopBettingRepository
                 response.BetToPotRatio
             ));
 
-        return new(PostflopBetResponseBucketAggregator.Aggregate(populationResponses));
+        return new(AggregateResponseBuckets(populationResponses));
     }
+
+    private static IReadOnlyList<PostflopBetResponseBucketDto> AggregateResponseBuckets(
+        IEnumerable<PostflopBetResponseObservation> observations
+    )
+    {
+        var countsByLine = Enum.GetValues<PostflopBetResponseLine>()
+            .ToDictionary(
+                line => line,
+                _ =>
+                    (
+                        Opportunities: new int[ResponseBucketThresholds.Length],
+                        Folds: new int[ResponseBucketThresholds.Length]
+                    )
+            );
+
+        foreach (var observation in observations)
+        {
+            if (!observation.BetToPotRatio.HasValue || observation.BetToPotRatio.Value > 3m)
+            {
+                continue;
+            }
+
+            var counts = countsByLine[observation.Line];
+            for (
+                var thresholdIndex = 0;
+                thresholdIndex < ResponseBucketThresholds.Length;
+                thresholdIndex++
+            )
+            {
+                if (
+                    observation.BetToPotRatio.Value
+                    > ResponseBucketThresholds[thresholdIndex] / 100m
+                )
+                {
+                    continue;
+                }
+
+                counts.Opportunities[thresholdIndex]++;
+                if (observation.Action == PostflopResponseAction.Fold)
+                {
+                    counts.Folds[thresholdIndex]++;
+                }
+            }
+        }
+
+        return Enum.GetValues<PostflopBetResponseLine>()
+            .SelectMany(line =>
+                ResponseBucketThresholds.Select(
+                    (threshold, index) =>
+                    {
+                        var counts = countsByLine[line];
+                        return new PostflopBetResponseBucketDto(
+                            line.ToString(),
+                            threshold,
+                            counts.Opportunities[index],
+                            counts.Folds[index]
+                        );
+                    }
+                )
+            )
+            .ToArray();
+    }
+
+    private record PostflopBetResponseObservation(
+        PostflopBetResponseLine Line,
+        PostflopResponseAction Action,
+        decimal? BetToPotRatio
+    );
 }

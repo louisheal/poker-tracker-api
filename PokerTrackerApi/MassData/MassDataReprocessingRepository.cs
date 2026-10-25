@@ -163,7 +163,8 @@ public class MassDataReprocessingRepository : IMassDataReprocessingRepository
         }
 
         var handIds = hands.Select(hand => hand.HandId).ToList();
-        var spots = hands.SelectMany(PostflopBettingSpotExtractor.Extract).ToArray();
+        var extractor = new PostflopBettingSpotExtractor();
+        var spots = hands.SelectMany(extractor.Extract).ToArray();
         var lastProcessedHandId = hands[^1].HandId;
         var leaseExpiresAt = DateTimeOffset.UtcNow + JobLeaseDuration;
 

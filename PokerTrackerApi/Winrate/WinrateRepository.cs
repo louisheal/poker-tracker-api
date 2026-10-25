@@ -56,7 +56,12 @@ public class WinrateRepository : IWinrateRepository
 
             if (handCount % HandsPerPoint == 0)
             {
-                var point = new WinrateHandBatchPointDto(handCount, net, withShowdown, withoutShowdown);
+                var point = new WinrateHandBatchPointDto(
+                    handCount,
+                    net,
+                    withShowdown,
+                    withoutShowdown
+                );
                 points.Add(point);
 
                 netWinningsWindow += point.NetWinningsBB;
@@ -76,7 +81,8 @@ public class WinrateRepository : IWinrateRepository
                 {
                     NetWinningsBBMovingAverage = netWinningsWindow / windowPointCount,
                     WithShowdownWinningsBBMovingAverage = withShowdownWindow / windowPointCount,
-                    WithoutShowdownWinningsBBMovingAverage = withoutShowdownWindow / windowPointCount,
+                    WithoutShowdownWinningsBBMovingAverage =
+                        withoutShowdownWindow / windowPointCount,
                 };
             }
         }
