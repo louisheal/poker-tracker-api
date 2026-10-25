@@ -8,6 +8,8 @@ public class PostflopBettingSpotExtractorStateful
     private PokerStreet _pokerStreet = PokerStreet.Preflop;
     private HashSet<string> _activePlayers = [];
     private decimal _potAmountBB = 0m;
+    private int _preflopRaiseCount = 0;
+    private string? _pfrPlayerId = null;
 
     public IReadOnlyList<PostflopBettingSpot> Extract(PokerHand hand)
     {
@@ -53,6 +55,7 @@ public class PostflopBettingSpotExtractorStateful
     }
 
     // TODO : increase line length limit
+    // TODO : validate that this happens before any other actions
     private HandlerResult HandleSmallBlindPostEvent(
         PokerHandSmallBlindPostEvent smallBlindPostEvent
     )
@@ -61,6 +64,7 @@ public class PostflopBettingSpotExtractorStateful
         return HandlerResult.Valid;
     }
 
+    // TODO : validate that this happens before any other actions
     private HandlerResult HandleBigBlindPostEvent(PokerHandBigBlindPostEvent bigBlindPostEvent)
     {
         _potAmountBB += bigBlindPostEvent.AmountBB;
@@ -75,6 +79,12 @@ public class PostflopBettingSpotExtractorStateful
 
     private HandlerResult HandlePlayerBetEvent(PokerHandPlayerBetEvent playerBetEvent)
     {
+        // not a valid action preflop - only valid actions are Fold/Call/Raise
+        if (_pokerStreet == PokerStreet.Preflop)
+        {
+            return HandlerResult.Invalid;
+        }
+
         _potAmountBB += playerBetEvent.BetAmountBB;
         return HandlerResult.Valid;
     }
@@ -87,6 +97,12 @@ public class PostflopBettingSpotExtractorStateful
 
     private HandlerResult HandlePlayerRaiseEvent(PokerHandPlayerRaiseEvent playerRaiseEvent)
     {
+        if (_pokerStreet == PokerStreet.Preflop)
+        {
+            _preflopRaiseCount += 1;
+            _pfrPlayerId = playerRaiseEvent.PlayerId;
+        }
+
         _potAmountBB += playerRaiseEvent.RaiseAmountBB;
         return HandlerResult.Valid;
     }
@@ -127,6 +143,8 @@ public class PostflopBettingSpotExtractorStateful
             .Players.Select(player => player.PlayerId)
             .ToHashSet(StringComparer.Ordinal);
         _potAmountBB = 0;
+        _preflopRaiseCount = 0;
+        _pfrPlayerId = null;
     }
 
     private record HandlerResult(bool IsValid)

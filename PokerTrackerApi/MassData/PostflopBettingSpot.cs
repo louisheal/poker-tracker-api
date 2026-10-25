@@ -88,6 +88,7 @@ public class PostflopBettingSpot
 
     public required string PfrPlayerId { get; init; }
 
+    // TODO : why is this required?
     public required string DefendingPlayerId { get; init; }
 
     public PokerPosition PfrPosition { get; init; }
