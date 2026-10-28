@@ -29,6 +29,7 @@ public class WinrateRepository : IWinrateRepository
             .AsSingleQuery()
             .OrderBy(hand => hand.Timestamp)
             .ThenBy(hand => hand.HandId)
+            .TakeLast(10_000)
             .AsAsyncEnumerable();
 
         var points = new List<WinrateHandBatchPointDto>();

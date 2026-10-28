@@ -22,6 +22,9 @@ public class MetricsRepository : IMetricsRepository
         var hands = _dbContext
             .PokerHands.AsNoTracking()
             .Include(hand => hand.Events)
+            .OrderBy(hand => hand.Timestamp)
+            .ThenBy(hand => hand.HandId)
+            .TakeLast(10_000)
             .AsSingleQuery()
             .AsAsyncEnumerable();
 
