@@ -23,13 +23,17 @@ public class WinrateRepository : IWinrateRepository
 
     public async Task<WinrateGraphDto> GetWinrateGraphAsync(CancellationToken cancellationToken)
     {
-        var hands = _dbContext
+        var newestHands = _dbContext
             .PokerHands.AsNoTracking()
             .Include(hand => hand.Events)
-            .AsSingleQuery()
+            .OrderByDescending(hand => hand.Timestamp)
+            .ThenByDescending(hand => hand.HandId)
+            .Take(10_000);
+
+        var hands = newestHands
             .OrderBy(hand => hand.Timestamp)
             .ThenBy(hand => hand.HandId)
-            .TakeLast(10_000)
+            .AsSingleQuery()
             .AsAsyncEnumerable();
 
         var points = new List<WinrateHandBatchPointDto>();
