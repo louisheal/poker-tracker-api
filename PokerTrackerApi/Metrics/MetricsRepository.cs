@@ -23,8 +23,7 @@ public class MetricsRepository : IMetricsRepository
             .PokerHands.AsNoTracking()
             .Include(hand => hand.Events)
             .OrderByDescending(hand => hand.Timestamp)
-            .ThenByDescending(hand => hand.HandId)
-            .Take(10_000);
+            .ThenByDescending(hand => hand.HandId);
 
         var hands = newestHands
             .OrderBy(hand => hand.Timestamp)
