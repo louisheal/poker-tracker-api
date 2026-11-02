@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PokerTrackerApi.Domain.PokerHand;
 using PokerTrackerApi.Domain.PokerHand.Events;
 using PokerTrackerApi.HandAnnotations;
+using PokerTrackerApi.Metrics;
 using PokerTrackerApi.Persistence;
 
 namespace PokerTrackerApi.HandHistories;
@@ -94,6 +95,7 @@ public class HandHistoryRepository : IHandHistoryRepository
         }
 
         var pokerHands = await pokerHandsQuery
+            .Include(hand => hand.Events)
             .OrderByDescending(hand => hand.Timestamp)
             .Take(MaxHandHistorySummaries)
             .ToArrayAsync(cancellationToken);
@@ -141,6 +143,7 @@ public class HandHistoryRepository : IHandHistoryRepository
         var pokerHands = await _dbContext
             .PokerHands.AsNoTracking()
             .Where(hand => Enumerable.Contains(uniqueHandIds, hand.HandId))
+            .Include(hand => hand.Events)
             .OrderByDescending(hand => hand.Timestamp)
             .ToArrayAsync(cancellationToken);
 
@@ -178,5 +181,13 @@ public class HandHistoryRepository : IHandHistoryRepository
         HandLabelAssignment[] labels,
         string note,
         bool flagged
-    ) => new(hand.HandId, hand.HeroHoleCards, labels, note, flagged);
+    ) =>
+        new(
+            hand.HandId,
+            hand.HeroHoleCards,
+            labels,
+            note,
+            flagged,
+            HeroHandResultCalculator.Calculate(hand).NetWinningsBB
+        );
 }

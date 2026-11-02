@@ -23,6 +23,7 @@ builder.Services.AddScoped<IHandHistoryRepository, HandHistoryRepository>();
 builder.Services.AddScoped<IWinrateRepository, WinrateRepository>();
 builder.Services.AddScoped<IMetricsRepository, MetricsRepository>();
 builder.Services.AddScoped<IRiverDiagnosticsRepository, RiverDiagnosticsRepository>();
+builder.Services.AddScoped<ITurnDiagnosticsRepository, TurnDiagnosticsRepository>();
 builder.Services.AddScoped<IHandReplayRepository, HandReplayRepository>();
 builder.Services.AddScoped<IHandAnnotationsRepository, HandAnnotationsRepository>();
 builder.Services.AddScoped<IPreflopSpotRepository, PreflopSpotRepository>();

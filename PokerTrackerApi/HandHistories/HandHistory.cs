@@ -8,5 +8,6 @@ public record HandHistory(
     HoleCards HeroHoleCards,
     HandLabelAssignment[] Labels,
     string Note,
-    bool Flagged
+    bool Flagged,
+    decimal NetWinningsBB
 );

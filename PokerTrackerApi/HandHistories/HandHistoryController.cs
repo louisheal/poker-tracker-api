@@ -51,7 +51,8 @@ public class HandHistoryController : ControllerBase
                             ))
                             .ToArray(),
                         hand.Note,
-                        hand.Flagged
+                            hand.Flagged,
+                            hand.NetWinningsBB
                     );
                 })
                 .ToArray()
@@ -79,7 +80,8 @@ public class HandHistoryController : ControllerBase
                         ))
                         .ToArray(),
                     hand.Note,
-                    hand.Flagged
+                        hand.Flagged,
+                        hand.NetWinningsBB
                 ))
                 .ToArray()
         );
