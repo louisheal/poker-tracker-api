@@ -167,16 +167,34 @@ public class PokerTrackerDbContext : DbContext
 
         modelBuilder.Entity<PreflopSpot>(entity =>
         {
-            entity.HasKey(spot => new { spot.HandId, spot.SpotKey });
+            entity.HasKey(spot => new
+            {
+                spot.HandId,
+                spot.ActorPosition,
+                spot.StateBeforeAction,
+            });
             entity.Property(spot => spot.HandId).HasMaxLength(32);
+            entity.Property(spot => spot.ActorPosition).HasConversion<int>();
             entity.Property(spot => spot.SpotKey).HasMaxLength(256);
             entity.Property(spot => spot.HandKey).HasMaxLength(3);
             entity.Property(spot => spot.Action).HasConversion<string>().HasMaxLength(16);
+            entity.Property(spot => spot.StateBeforeAction).HasConversion<string>().HasMaxLength(16);
+            entity.Property(spot => spot.OpenerPosition).HasConversion<int>();
+            entity.Property(spot => spot.ThreeBettorPosition).HasConversion<int>();
             entity.HasIndex(spot => new
             {
                 spot.SpotKey,
                 spot.HandKey,
                 spot.Action,
+            });
+            entity.HasIndex(spot => new
+            {
+                spot.StateBeforeAction,
+                spot.ActorPosition,
+                spot.OpenerPosition,
+                spot.ThreeBettorPosition,
+                spot.Action,
+                spot.HandKey,
             });
             entity
                 .HasOne<RawHand>()

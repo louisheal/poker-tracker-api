@@ -437,9 +437,12 @@ namespace PokerTrackerApi.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
 
-                    b.Property<string>("SpotKey")
-                        .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
+                    b.Property<int>("ActorPosition")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StateBeforeAction")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -447,13 +450,28 @@ namespace PokerTrackerApi.Persistence.Migrations
                         .HasColumnType("varchar(16)");
 
                     b.Property<string>("HandKey")
-                        .IsRequired()
                         .HasMaxLength(3)
                         .HasColumnType("varchar(3)");
 
-                    b.HasKey("HandId", "SpotKey");
+                    b.Property<bool>("IsHero")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int?>("OpenerPosition")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SpotKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<int?>("ThreeBettorPosition")
+                        .HasColumnType("int");
+
+                    b.HasKey("HandId", "ActorPosition", "StateBeforeAction");
 
                     b.HasIndex("SpotKey", "HandKey", "Action");
+
+                    b.HasIndex("StateBeforeAction", "ActorPosition", "OpenerPosition", "ThreeBettorPosition", "Action", "HandKey");
 
                     b.ToTable("PreflopSpots");
                 });

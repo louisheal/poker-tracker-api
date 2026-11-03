@@ -4,6 +4,9 @@ using PokerTrackerApi.Domain.PokerHand.Events;
 
 namespace PokerTrackerApi.PreflopSpots;
 
+// TODO : this could do with a complete tidy up
+// an FST based class that applies events one at a time would be ideal
+// like how the postflop extractor works
 public static class PreflopSpotExtensions
 {
     public static IReadOnlyList<PreflopSpot> ToPreflopSpots(this PokerHand hand)
@@ -44,7 +47,15 @@ public static class PreflopSpotExtensions
 
             if (playerAction.PlayerId == hand.HeroPlayerId)
             {
-                if (!TryCreateSpotKey(heroPosition, actions, out var spotKey, out var isRfi))
+                if (
+                    !TryCreateSpotKey(
+                        heroPosition,
+                        actions,
+                        out var spotKey,
+                        out var isRfi,
+                        out var openerPosition
+                    )
+                )
                 {
                     break;
                 }
@@ -60,7 +71,14 @@ public static class PreflopSpotExtensions
                         HandId = hand.HandId,
                         SpotKey = spotKey,
                         HandKey = handKey,
+                        ActorPosition = heroPosition,
+                        StateBeforeAction = isRfi
+                            ? PreflopSpotState.Unopened
+                            : PreflopSpotState.Opened,
+                        OpenerPosition = openerPosition,
+                        ThreeBettorPosition = null,
                         Action = action,
+                        IsHero = true,
                     }
                 );
             }
@@ -100,11 +118,13 @@ public static class PreflopSpotExtensions
         PokerPosition heroPosition,
         IReadOnlyList<ObservedAction> actions,
         out string spotKey,
-        out bool isRfi
+        out bool isRfi,
+        out PokerPosition? openerPosition
     )
     {
         spotKey = string.Empty;
         isRfi = false;
+        openerPosition = null;
 
         if (actions.Any(action => action.Action == PokerAction.Call))
         {
@@ -135,6 +155,8 @@ public static class PreflopSpotExtensions
             {
                 return false;
             }
+
+            openerPosition = opener.Position;
         }
         else
         {
