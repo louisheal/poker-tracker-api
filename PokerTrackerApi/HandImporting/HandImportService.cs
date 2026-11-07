@@ -1,99 +1,49 @@
-using PokerTrackerApi.HandImporting.HandParsers;
-using PokerTrackerApi.HandImporting.HandReaders;
+using PokerTrackerApi.HandImporting.Repository;
 
 namespace PokerTrackerApi.HandImporting;
 
 public interface IHandImportService
 {
-    Task<HandImportSummary> ImportAsync(
-        IReadOnlyCollection<IFormFile> files,
-        CancellationToken cancellationToken
-    );
-    Task<HandImportFileSummary> ImportFileAsync(Stream stream, CancellationToken cancellationToken);
+    Task ImportFiles(IReadOnlyCollection<IFormFile> files, CancellationToken cancellationToken);
 }
 
 public class HandImportService : IHandImportService
 {
+    private readonly IHandFileStore _handFileStore;
     private readonly IHandImportRepository _repository;
-    private readonly IPokerHandParser _parser;
-    private readonly IPokerHandReader _reader;
     private readonly ILogger<HandImportService> _logger;
 
     public HandImportService(
-        IHandImportRepository handImportRepository,
-        IPokerHandParser parser,
-        IPokerHandReader reader,
+        IHandFileStore handFileStore,
+        IHandImportRepository repository,
         ILogger<HandImportService> logger
     )
     {
-        _repository = handImportRepository;
-        _parser = parser;
+        _handFileStore = handFileStore;
+        _repository = repository;
         _logger = logger;
-        _reader = reader;
     }
 
-    public async Task<HandImportSummary> ImportAsync(
+    public async Task ImportFiles(
         IReadOnlyCollection<IFormFile> files,
         CancellationToken cancellationToken
     )
     {
-        var savedHands = 0;
-        var duplicateHands = 0;
-        var invalidHands = 0;
-
         foreach (var file in files)
         {
-            using var stream = file.OpenReadStream();
-            var summary = await ImportFileAsync(stream, cancellationToken);
-            savedHands += summary.HandsSaved;
-            duplicateHands += summary.DuplicateHands;
-            invalidHands += summary.InvalidHands;
+            await ImportFile(file, cancellationToken);
         }
-
-        return new HandImportSummary(files.Count, savedHands, duplicateHands, invalidHands);
     }
 
-    public async Task<HandImportFileSummary> ImportFileAsync(
-        Stream stream,
-        CancellationToken cancellationToken
-    )
+    private async Task ImportFile(IFormFile file, CancellationToken cancellationToken)
     {
-        using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
-        var savedHands = 0;
-        var duplicateHands = 0;
-        var invalidHands = 0;
+        var fileId = await _repository.CreateStartedAsync(file.FileName, cancellationToken);
 
-        await foreach (var rawHand in _reader.ReadHandsAsync(reader, cancellationToken))
-        {
-            var parseResult = _parser.ParseHand(rawHand);
-            if (parseResult is HandHistoryParseFailure failure)
-            {
-                invalidHands++;
-                _logger.LogWarning("Skipping hand: {Reason}", failure.Error);
-                continue;
-            }
+        // await using var stream = file.OpenReadStream();
+        // await _handFileStore.SaveAsync(stream, fileId, cancellationToken);
 
-            if (parseResult is not HandHistoryParseSuccess success)
-            {
-                throw new InvalidOperationException(
-                    $"Unexpected parse result type: {parseResult.GetType().Name}"
-                );
-            }
+        // await _repository.MarkStored(fileId, cancellationToken);
 
-            var hand =
-                success.Hand
-                ?? throw new InvalidOperationException(
-                    "A successful parse result must contain a parsed hand."
-                );
-            if (!await _repository.TryAddHandAsync(hand, rawHand, cancellationToken))
-            {
-                duplicateHands++;
-                continue;
-            }
-
-            savedHands++;
-        }
-
-        return new HandImportFileSummary(savedHands, duplicateHands, invalidHands);
+        // TODO : write publish to outbox
     }
 }

@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using PokerTrackerApi.HandImporting.Jobs;
 
 namespace PokerTrackerApi.HandImporting;
 
@@ -7,16 +6,16 @@ namespace PokerTrackerApi.HandImporting;
 [Route("api/imports")]
 public class HandImportController : ControllerBase
 {
-    private readonly IHandImportJobService _jobService;
+    private readonly IHandImportService _service;
 
-    public HandImportController(IHandImportJobService jobService)
+    public HandImportController(IHandImportService service)
     {
-        _jobService = jobService;
+        _service = service;
     }
 
     [HttpPost]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<HandImportJobDto>> Upload(
+    public async Task<ActionResult> Upload(
         [FromForm] List<IFormFile> files,
         CancellationToken cancellationToken
     )
@@ -26,22 +25,8 @@ public class HandImportController : ControllerBase
             return BadRequest("At least one file is required.");
         }
 
-        var job = await _jobService.EnqueueAsync(files, cancellationToken);
-        return AcceptedAtAction(nameof(GetJob), new { jobId = job.JobId }, job);
-    }
-
-    [HttpGet("active")]
-    public async Task<ActionResult<HandImportJobDto[]>> GetActiveJobs(
-        CancellationToken cancellationToken
-    ) => Ok(await _jobService.GetActiveAsync(cancellationToken));
-
-    [HttpGet("{jobId:guid}")]
-    public async Task<ActionResult<HandImportJobDto>> GetJob(
-        Guid jobId,
-        CancellationToken cancellationToken
-    )
-    {
-        var job = await _jobService.GetAsync(jobId, cancellationToken);
-        return job is null ? NotFound() : Ok(job);
+        // TODO : add try/catch ?
+        await _service.ImportFiles(files, cancellationToken);
+        return NoContent();
     }
 }

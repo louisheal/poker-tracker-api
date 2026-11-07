@@ -1,69 +1,109 @@
-using Microsoft.EntityFrameworkCore;
+using Amazon.Runtime;
+using Amazon.S3;
 using Microsoft.OpenApi;
-using PokerTrackerApi.Diagnostics;
-using PokerTrackerApi.HandAnnotations;
-using PokerTrackerApi.HandHistories;
+using Orleans.Configuration;
+using PokerTrackerApi.Database;
 using PokerTrackerApi.HandImporting;
-using PokerTrackerApi.HandImporting.HandParsers;
-using PokerTrackerApi.HandImporting.HandReaders;
-using PokerTrackerApi.HandImporting.HandReprocessing;
-using PokerTrackerApi.HandImporting.Jobs;
-using PokerTrackerApi.HandReplays;
-using PokerTrackerApi.MassData;
-using PokerTrackerApi.Metrics;
-using PokerTrackerApi.Persistence;
-using PokerTrackerApi.PreflopSpots;
-using PokerTrackerApi.Winrate;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddScoped<IHandHistoryRepository, HandHistoryRepository>();
-builder.Services.AddScoped<IWinrateRepository, WinrateRepository>();
-builder.Services.AddScoped<IMetricsRepository, MetricsRepository>();
-builder.Services.AddScoped<IRiverDiagnosticsRepository, RiverDiagnosticsRepository>();
-builder.Services.AddScoped<ITurnDiagnosticsRepository, TurnDiagnosticsRepository>();
-builder.Services.AddScoped<IHandReplayRepository, HandReplayRepository>();
-builder.Services.AddScoped<IHandAnnotationsRepository, HandAnnotationsRepository>();
-builder.Services.AddScoped<IPreflopSpotRepository, PreflopSpotRepository>();
-builder.Services.AddScoped<IHandReprocessingRepository, HandReprocessingRepository>();
-builder.Services.AddScoped<IHandImportRepository, HandImportRepository>();
-builder.Services.AddScoped<IHandImportJobRepository, HandImportJobRepository>();
-builder.Services.AddScoped<IPostflopBettingRepository, PostflopBettingRepository>();
-builder.Services.AddScoped<IMassDataReprocessingRepository, MassDataReprocessingRepository>();
-builder.Services.AddScoped<IMassDataReprocessingService, MassDataReprocessingService>();
+var connectionString = builder.Configuration.GetConnectionString("PokerDatabase")
+    ?? throw new InvalidOperationException("PokerDatabase connection string is missing.");
 
-builder.Services.AddScoped<IHandReprocessingService, HandReprocessingService>();
-builder.Services.AddScoped<IHandHistoryMapper, HandHistoryMapper>();
-builder.Services.AddScoped<IHandImportService, HandImportService>();
-builder.Services.AddScoped<IHandImportJobService, HandImportJobService>();
-builder.Services.AddScoped<IPokerHandReader, GgPokerHandReader>();
-builder.Services.AddScoped<IPokerHandParser, GgPokerHandParser>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddDatabase(connectionString);
 
-builder.Services.AddDbContext<PokerTrackerDbContext>(options =>
+builder.Services.AddHandImporting();
+
+var importStorageProvider = builder.Configuration["HandImportStorage:Provider"] ?? "Local";
+if (string.Equals(importStorageProvider, "Garage", StringComparison.OrdinalIgnoreCase))
 {
-    var connectionString = builder.Configuration.GetConnectionString("PokerDb");
-    if (string.IsNullOrWhiteSpace(connectionString))
+    var endpoint =
+        builder.Configuration["HandImportStorage:Endpoint"] ?? "http://localhost:3900";
+
+    var region = builder.Configuration["HandImportStorage:Region"] ?? "garage";
+    if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var serviceUri)
+        || serviceUri.Scheme is not ("http" or "https"))
     {
-        throw new InvalidOperationException("Connection string 'PokerDb' is required.");
+        throw new InvalidOperationException(
+            "HandImportStorage:Endpoint must be an absolute HTTP or HTTPS URL."
+        );
     }
 
-    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 0)));
-});
+    var s3Config = new AmazonS3Config
+    {
+        ServiceURL = endpoint,
+        ForcePathStyle = true,
+        AuthenticationRegion = region,
+    };
+    var accessKey = builder.Configuration["HandImportStorage:AccessKey"];
+    var secretKey = builder.Configuration["HandImportStorage:SecretKey"];
+    if (string.IsNullOrWhiteSpace(accessKey) != string.IsNullOrWhiteSpace(secretKey))
+    {
+        throw new InvalidOperationException(
+            "HandImportStorage:AccessKey and HandImportStorage:SecretKey must be configured together."
+        );
+    }
 
-var importStagingDirectory =
-    builder.Configuration["HandImportStorage:Directory"]
-    ?? Path.Combine(AppContext.BaseDirectory, "import-staging");
-builder.Services.AddSingleton<IHandImportFileStore>(
-    new HandImportFileStore(importStagingDirectory)
-);
-builder.Services.AddHostedService<HandImportBackgroundService>();
-builder.Services.AddHostedService<MassDataReprocessingBackgroundService>();
+    if (!string.IsNullOrWhiteSpace(accessKey))
+    {
+        var credentials = new BasicAWSCredentials(accessKey, secretKey);
+        builder.Services.AddSingleton<IAmazonS3>(_ =>
+            new AmazonS3Client(credentials, s3Config)
+        );
+    }
+    else
+    {
+        builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(s3Config));
+    }
+
+    builder.Services.AddSingleton<IHandFileStore>(serviceProvider =>
+        new GarageHandFileStore(
+            serviceProvider.GetRequiredService<IAmazonS3>()
+        )
+    );
+}
+else
+{
+    throw new InvalidOperationException(
+        $"Unsupported hand import storage provider '{importStorageProvider}'."
+    );
+}
 
 builder.Services.AddOpenApi(options =>
 {
+    options.AddOperationTransformer(
+        (operation, context, cancellationToken) =>
+        {
+            var description = context.Description;
+
+            if (
+                string.Equals(
+                    description.HttpMethod,
+                    "POST",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                && string.Equals(
+                    description.RelativePath?.Trim('/'),
+                    "api/imports",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                && operation.RequestBody is { } requestBody
+                && requestBody.Content.TryGetValue(
+                    "application/x-www-form-urlencoded",
+                    out var formContent
+                )
+            )
+            {
+                requestBody.Content.Remove("application/x-www-form-urlencoded");
+                requestBody.Content["multipart/form-data"] = formContent;
+            }
+
+            return Task.CompletedTask;
+        }
+    );
+
     options.AddDocumentTransformer(
         (document, context, cancellationToken) =>
         {
@@ -86,6 +126,18 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Host.UseOrleans(siloBuilder =>
+{
+    siloBuilder.UseLocalhostClustering();
+    siloBuilder.Configure<ClusterOptions>(options =>
+    {
+        options.ClusterId = "poker-tracker-dev";
+        options.ServiceId = "poker-tracker";
+    });
+});
+
+DatabaseMigrator.Migrate(connectionString);
+
 var app = builder.Build();
 
 app.MapOpenApi("/api/openapi/{documentName}.json");
@@ -98,11 +150,5 @@ app.UseSwaggerUI(options =>
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
-
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<PokerTrackerDbContext>();
-    await dbContext.Database.MigrateAsync();
-}
 
 app.Run();
