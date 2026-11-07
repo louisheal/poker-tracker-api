@@ -10,6 +10,7 @@ public static class DatabaseConfiguration
         {
             var dataSource = new MySqlDataSource(connectionString);
             services.AddSingleton(dataSource);
+            services.AddSingleton<IPokerDatabaseConnectionFactory, MySqlDatabaseConnectionFactory>();
 
             return services;
         }

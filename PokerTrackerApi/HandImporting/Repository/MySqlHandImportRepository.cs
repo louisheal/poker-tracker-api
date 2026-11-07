@@ -1,11 +1,15 @@
 using Dapper;
-using MySqlConnector;
+using System.Data;
 
 namespace PokerTrackerApi.HandImporting.Repository;
 
-public class MySqlHandImportRepository(MySqlDataSource dataSource) : IHandImportRepository
+public class MySqlHandImportRepository : IHandImportRepository
 {
-    public async Task<Guid> CreateStartedAsync(string fileName, CancellationToken cancellationToken)
+    public async Task<Guid> CreateStartedAsync(
+        string fileName,
+        IDbConnection connection,
+        CancellationToken cancellationToken
+    )
     {
         var fileId = Guid.NewGuid();
 
@@ -15,8 +19,6 @@ public class MySqlHandImportRepository(MySqlDataSource dataSource) : IHandImport
                 VALUES
                     (@FileId, @FileName, @Status, @CreatedAt);
             """;
-
-        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(
             new CommandDefinition(
@@ -35,20 +37,46 @@ public class MySqlHandImportRepository(MySqlDataSource dataSource) : IHandImport
         return fileId;
     }
 
-    public Task MarkStoredAsync(Guid fileId, CancellationToken cancellationToken)
+    public async Task<bool> MarkStoredAsync(
+        Guid fileId,
+        IDbConnection connection,
+        IDbTransaction transaction,
+        CancellationToken cancellationToken
+    )
     {
-        throw new NotImplementedException();
+        const string query = """
+                UPDATE HandFileMetadata
+                SET Status = @Status
+                WHERE FileId = @FileId
+            """;
+
+        var updatedRows = await connection.ExecuteAsync(
+            new CommandDefinition(
+                query,
+                new
+                {
+                    FileId = fileId,
+                    Status = HandFileStatus.Stored,
+                },
+                transaction: transaction,
+                cancellationToken: cancellationToken
+            )
+        );
+
+        return updatedRows == 1;
     }
 
-    public async Task MarkFailedAsync(Guid fileId, CancellationToken cancellationToken)
+    public async Task MarkFailedAsync(
+        Guid fileId,
+        IDbConnection connection,
+        CancellationToken cancellationToken
+    )
     {
         const string query = """
                 UPDATE HandFileMetadata
                 SET Status = @Status
                 WHERE FileId = @FileId;
             """;
-
-        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(
             new CommandDefinition(
@@ -66,6 +94,7 @@ public class MySqlHandImportRepository(MySqlDataSource dataSource) : IHandImport
     public async Task<IReadOnlyList<Guid>> GetIdsCreatedBeforeAsync(
         int limit,
         DateTimeOffset createdBefore,
+        IDbConnection connection,
         CancellationToken cancellationToken
     )
     {
@@ -77,8 +106,6 @@ public class MySqlHandImportRepository(MySqlDataSource dataSource) : IHandImport
                 ORDER BY CreatedAt, FileId
                 LIMIT @Limit;
             """;
-
-        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
 
         var fileIds = await connection.QueryAsync<string>(
             new CommandDefinition(

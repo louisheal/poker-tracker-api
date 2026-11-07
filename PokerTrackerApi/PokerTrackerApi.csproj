@@ -11,6 +11,8 @@
     <PackageReference Include="Dapper" Version="2.1.89" />
     <PackageReference Include="dbup-core" Version="6.1.1" />
     <PackageReference Include="dbup-mysql" Version="6.1.0" />
+    <PackageReference Include="DotNetCore.CAP.Kafka" Version="10.0.2" />
+    <PackageReference Include="DotNetCore.CAP.MySql" Version="10.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="MySqlConnector" Version="2.6.2" />
     <PackageReference Include="Microsoft.Orleans.Server" Version="10.4.2" />

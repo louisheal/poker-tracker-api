@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using PokerTrackerApi.Database;
 using PokerTrackerApi.HandImporting.Repository;
 using PokerTrackerApi.HandImporting.Storage;
 
@@ -8,6 +9,7 @@ public class HandImportReconciliationService : BackgroundService
 {
     private readonly IHandFileStore _store;
     private readonly IHandImportRepository _repository;
+    private readonly IPokerDatabaseConnectionFactory _connectionFactory;
     private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _pollInterval;
     private readonly TimeSpan _staleAfter;
@@ -16,12 +18,14 @@ public class HandImportReconciliationService : BackgroundService
     public HandImportReconciliationService(
         IHandFileStore store,
         IHandImportRepository repository,
+        IPokerDatabaseConnectionFactory connectionFactory,
         IOptions<HandImportReconciliationOptions> options,
         TimeProvider timeProvider
     )
     {
         _store = store;
         _repository = repository;
+        _connectionFactory = connectionFactory;
         _timeProvider = timeProvider;
         _pollInterval = options.Value.PollInterval;
         _staleAfter = options.Value.StaleAfter;
@@ -40,11 +44,16 @@ public class HandImportReconciliationService : BackgroundService
     private async Task ReconcileHandFiles(CancellationToken cancellationToken)
     {
         var staleBefore = _timeProvider.GetUtcNow() - _staleAfter;
+
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+
         var staleHandFiles = await _repository.GetIdsCreatedBeforeAsync(
             _batchSize,
             staleBefore,
+            connection,
             cancellationToken
         );
+
         foreach (var fileId in staleHandFiles)
         {
             await ReconcileHandFile(fileId, cancellationToken);
@@ -54,6 +63,8 @@ public class HandImportReconciliationService : BackgroundService
     private async Task ReconcileHandFile(Guid fileId, CancellationToken cancellationToken)
     {
         await _store.RemoveFileAsync(fileId, cancellationToken);
-        await _repository.MarkFailedAsync(fileId, cancellationToken);
+
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await _repository.MarkFailedAsync(fileId, connection, cancellationToken);
     }
 }
