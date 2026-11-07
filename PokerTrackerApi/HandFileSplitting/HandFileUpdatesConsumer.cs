@@ -1,7 +1,7 @@
 using DotNetCore.CAP;
 using PokerTrackerApi.Domain;
 
-namespace PokerTrackerApi.HandSplitting;
+namespace PokerTrackerApi.HandFileSplitting;
 
 public class HandFileUpdatesConsumer
 {
