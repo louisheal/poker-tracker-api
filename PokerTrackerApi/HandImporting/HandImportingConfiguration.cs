@@ -1,7 +1,6 @@
-using PokerTrackerApi.HandImporting.Persistence;
 using PokerTrackerApi.HandImporting.Reconciliation;
 using PokerTrackerApi.HandImporting.Repository;
-using PokerTrackerApi.HandImporting.Storage;
+using PokerTrackerApi.HandFileStorage;
 
 namespace PokerTrackerApi.HandImporting;
 

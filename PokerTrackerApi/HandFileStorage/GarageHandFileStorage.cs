@@ -1,14 +1,14 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 
-namespace PokerTrackerApi.HandImporting.Storage;
+namespace PokerTrackerApi.HandFileStorage;
 
-public sealed class GarageHandFileStore : IHandFileStore
+public sealed class GarageHandFileStorage : IHandFileStorage
 {
     private const string BucketName = "poker-tracker";
     private readonly IAmazonS3 _s3Client;
 
-    public GarageHandFileStore(IAmazonS3 s3Client)
+    public GarageHandFileStorage(IAmazonS3 s3Client)
     {
         _s3Client = s3Client;
     }
@@ -26,7 +26,15 @@ public sealed class GarageHandFileStore : IHandFileStore
         await _s3Client.PutObjectAsync(request, cancellationToken);
     }
 
-    public async Task RemoveFileAsync(Guid fileId, CancellationToken cancellationToken)
+    public async Task<Stream> OpenReadAsync(Guid fileId, CancellationToken cancellationToken)
+    {
+        var request = new GetObjectRequest { BucketName = BucketName, Key = GetObjectKey(fileId) };
+        var response = await _s3Client.GetObjectAsync(request, cancellationToken);
+
+        return response.ResponseStream;
+    }
+
+    public async Task RemoveAsync(Guid fileId, CancellationToken cancellationToken)
     {
         var request = new DeleteObjectRequest
         {

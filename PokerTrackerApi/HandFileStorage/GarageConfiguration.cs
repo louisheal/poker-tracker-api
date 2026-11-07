@@ -2,7 +2,7 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.Extensions.Options;
 
-namespace PokerTrackerApi.HandImporting.Storage;
+namespace PokerTrackerApi.HandFileStorage;
 
 public static class GarageConfiguration
 {
@@ -11,13 +11,13 @@ public static class GarageConfiguration
         public IServiceCollection AddGarage(IConfiguration configuration)
         {
             services
-                .AddOptions<HandImportStorageOptions>()
-                .Bind(configuration.GetSection(HandImportStorageOptions.SectionName));
+                .AddOptions<HandFileStorageOptions>()
+                .Bind(configuration.GetSection(HandFileStorageOptions.SectionName));
 
             services.AddSingleton<IAmazonS3>(serviceProvider =>
             {
                 var storage = serviceProvider
-                    .GetRequiredService<IOptions<HandImportStorageOptions>>()
+                    .GetRequiredService<IOptions<HandFileStorageOptions>>()
                     .Value;
                 var s3Config = new AmazonS3Config
                 {
@@ -33,7 +33,7 @@ public static class GarageConfiguration
                 return new AmazonS3Client(credentials, s3Config);
             });
 
-            services.AddSingleton<IHandFileStore, GarageHandFileStore>();
+            services.AddSingleton<IHandFileStorage, GarageHandFileStorage>();
 
             return services;
         }

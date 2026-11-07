@@ -1,8 +1,8 @@
-namespace PokerTrackerApi.HandImporting.Storage;
+namespace PokerTrackerApi.HandFileStorage;
 
-public class HandImportStorageOptions
+public class HandFileStorageOptions
 {
-    public const string SectionName = "HandImportStorage";
+    public const string SectionName = "HandFileStorage";
 
     public string Endpoint { get; set; } = string.Empty;
     public string Region { get; set; } = string.Empty;

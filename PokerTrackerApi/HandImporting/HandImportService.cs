@@ -1,5 +1,4 @@
-using PokerTrackerApi.HandImporting.Persistence;
-using PokerTrackerApi.HandImporting.Storage;
+using PokerTrackerApi.HandFileStorage;
 
 namespace PokerTrackerApi.HandImporting;
 
@@ -10,11 +9,11 @@ public interface IHandImportService
 
 public class HandImportService : IHandImportService
 {
-    private readonly IHandFileStore _handFileStore;
+    private readonly IHandFileStorage _handFileStore;
     private readonly IHandImportPersistenceService _persistenceService;
 
     public HandImportService(
-        IHandFileStore handFileStore,
+        IHandFileStorage handFileStore,
         IHandImportPersistenceService persistenceService
     )
     {

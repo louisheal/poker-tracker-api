@@ -1,8 +1,16 @@
 using DotNetCore.CAP;
 using PokerTrackerApi.Database;
+using PokerTrackerApi.Domain;
 using PokerTrackerApi.HandImporting.Repository;
 
-namespace PokerTrackerApi.HandImporting.Persistence;
+namespace PokerTrackerApi.HandImporting;
+
+public interface IHandImportPersistenceService
+{
+    Task<Guid> CreateStartedAsync(string fileName, CancellationToken cancellationToken);
+
+    Task MarkStoredAndPublishAsync(Guid fileId, CancellationToken cancellationToken);
+}
 
 public class HandImportPersistenceService : IHandImportPersistenceService
 {
