@@ -18,11 +18,24 @@ public sealed class GarageHandFileStore : IHandFileStore
         var request = new PutObjectRequest
         {
             BucketName = BucketName,
-            Key = $"hand-files/{fileId:N}.txt",
+            Key = GetObjectKey(fileId),
             InputStream = file,
             UseChunkEncoding = false,
         };
 
         await _s3Client.PutObjectAsync(request, cancellationToken);
     }
+
+    public async Task RemoveFileAsync(Guid fileId, CancellationToken cancellationToken)
+    {
+        var request = new DeleteObjectRequest
+        {
+            BucketName = BucketName,
+            Key = GetObjectKey(fileId),
+        };
+
+        await _s3Client.DeleteObjectAsync(request, cancellationToken);
+    }
+
+    private static string GetObjectKey(Guid fileId) => $"hand-files/{fileId:N}.txt";
 }

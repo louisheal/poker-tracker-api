@@ -4,4 +4,5 @@ public enum HandFileStatus
 {
     Started,
     Stored,
+    Failed,
 }

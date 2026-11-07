@@ -1,3 +1,4 @@
+using PokerTrackerApi.HandImporting.Reconciliation;
 using PokerTrackerApi.HandImporting.Repository;
 using PokerTrackerApi.HandImporting.Storage;
 
@@ -9,8 +10,15 @@ public static class HandImportingConfiguration
     {
         public IServiceCollection AddHandImporting(IConfiguration configuration)
         {
-            services.AddScoped<IHandImportRepository, MySqlHandImportRepository>();
+            services.AddHostedService<HandImportReconciliationService>();
+            services.AddSingleton<IHandImportRepository, MySqlHandImportRepository>();
             services.AddScoped<IHandImportService, HandImportService>();
+
+            services
+                .AddOptions<HandImportReconciliationOptions>()
+                .Bind(configuration.GetSection(HandImportReconciliationOptions.SectionName));
+
+            services.AddSingleton(TimeProvider.System);
 
             services.AddGarage(configuration);
 

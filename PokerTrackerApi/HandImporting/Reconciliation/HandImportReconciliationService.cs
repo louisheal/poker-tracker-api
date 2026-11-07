@@ -1,0 +1,59 @@
+using Microsoft.Extensions.Options;
+using PokerTrackerApi.HandImporting.Repository;
+using PokerTrackerApi.HandImporting.Storage;
+
+namespace PokerTrackerApi.HandImporting.Reconciliation;
+
+public class HandImportReconciliationService : BackgroundService
+{
+    private readonly IHandFileStore _store;
+    private readonly IHandImportRepository _repository;
+    private readonly TimeProvider _timeProvider;
+    private readonly TimeSpan _pollInterval;
+    private readonly TimeSpan _staleAfter;
+    private readonly int _batchSize;
+
+    public HandImportReconciliationService(
+        IHandFileStore store,
+        IHandImportRepository repository,
+        IOptions<HandImportReconciliationOptions> options,
+        TimeProvider timeProvider
+    )
+    {
+        _store = store;
+        _repository = repository;
+        _timeProvider = timeProvider;
+        _pollInterval = options.Value.PollInterval;
+        _staleAfter = options.Value.StaleAfter;
+        _batchSize = options.Value.BatchSize;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await ReconcileHandFiles(cancellationToken);
+            await Task.Delay(_pollInterval, _timeProvider, cancellationToken);
+        }
+    }
+
+    private async Task ReconcileHandFiles(CancellationToken cancellationToken)
+    {
+        var staleBefore = _timeProvider.GetUtcNow() - _staleAfter;
+        var staleHandFiles = await _repository.GetIdsCreatedBeforeAsync(
+            _batchSize,
+            staleBefore,
+            cancellationToken
+        );
+        foreach (var fileId in staleHandFiles)
+        {
+            await ReconcileHandFile(fileId, cancellationToken);
+        }
+    }
+
+    private async Task ReconcileHandFile(Guid fileId, CancellationToken cancellationToken)
+    {
+        await _store.RemoveFileAsync(fileId, cancellationToken);
+        await _repository.MarkFailedAsync(fileId, cancellationToken);
+    }
+}

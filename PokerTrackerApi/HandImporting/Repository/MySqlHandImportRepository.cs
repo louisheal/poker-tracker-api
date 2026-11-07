@@ -35,8 +35,64 @@ public class MySqlHandImportRepository(MySqlDataSource dataSource) : IHandImport
         return fileId;
     }
 
-    public Task MarkStored(Guid fileId, CancellationToken cancellationToken)
+    public Task MarkStoredAsync(Guid fileId, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
+    }
+
+    public async Task MarkFailedAsync(Guid fileId, CancellationToken cancellationToken)
+    {
+        const string query = """
+                UPDATE HandFileMetadata
+                SET Status = @Status
+                WHERE FileId = @FileId;
+            """;
+
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                query,
+                new
+                {
+                    FileId = fileId,
+                    Status = HandFileStatus.Failed,
+                },
+                cancellationToken: cancellationToken
+            )
+        );
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetIdsCreatedBeforeAsync(
+        int limit,
+        DateTimeOffset createdBefore,
+        CancellationToken cancellationToken
+    )
+    {
+        const string query = """
+                SELECT FileId
+                FROM HandFileMetadata
+                WHERE Status = @Status
+                  AND CreatedAt <= @CreatedBefore
+                ORDER BY CreatedAt, FileId
+                LIMIT @Limit;
+            """;
+
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+
+        var fileIds = await connection.QueryAsync<string>(
+            new CommandDefinition(
+                query,
+                new
+                {
+                    Status = HandFileStatus.Started,
+                    CreatedBefore = createdBefore,
+                    Limit = limit,
+                },
+                cancellationToken: cancellationToken
+            )
+        );
+
+        return fileIds.Select(Guid.Parse).ToArray();
     }
 }
