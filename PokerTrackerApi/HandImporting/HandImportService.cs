@@ -1,4 +1,5 @@
 using PokerTrackerApi.HandImporting.Repository;
+using PokerTrackerApi.HandImporting.Storage;
 
 namespace PokerTrackerApi.HandImporting;
 
@@ -39,8 +40,8 @@ public class HandImportService : IHandImportService
     {
         var fileId = await _repository.CreateStartedAsync(file.FileName, cancellationToken);
 
-        // await using var stream = file.OpenReadStream();
-        // await _handFileStore.SaveAsync(stream, fileId, cancellationToken);
+        await using var stream = file.OpenReadStream();
+        await _handFileStore.SaveAsync(stream, fileId, cancellationToken);
 
         // await _repository.MarkStored(fileId, cancellationToken);
 

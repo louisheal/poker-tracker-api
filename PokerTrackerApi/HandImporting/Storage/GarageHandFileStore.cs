@@ -1,11 +1,11 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 
-namespace PokerTrackerApi.HandImporting;
+namespace PokerTrackerApi.HandImporting.Storage;
 
 public sealed class GarageHandFileStore : IHandFileStore
 {
-    private const string BucketName = "hand-files";
+    private const string BucketName = "poker-tracker";
     private readonly IAmazonS3 _s3Client;
 
     public GarageHandFileStore(IAmazonS3 s3Client)
@@ -18,8 +18,9 @@ public sealed class GarageHandFileStore : IHandFileStore
         var request = new PutObjectRequest
         {
             BucketName = BucketName,
-            Key = $"{fileId:N}.txt",
+            Key = $"hand-files/{fileId:N}.txt",
             InputStream = file,
+            UseChunkEncoding = false,
         };
 
         await _s3Client.PutObjectAsync(request, cancellationToken);

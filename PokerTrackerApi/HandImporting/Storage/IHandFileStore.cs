@@ -1,4 +1,4 @@
-namespace PokerTrackerApi.HandImporting;
+namespace PokerTrackerApi.HandImporting.Storage;
 
 public interface IHandFileStore
 {

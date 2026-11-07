@@ -1,11 +1,19 @@
-using Amazon.Runtime;
-using Amazon.S3;
 using Microsoft.OpenApi;
 using Orleans.Configuration;
 using PokerTrackerApi.Database;
 using PokerTrackerApi.HandImporting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddJsonFile(
+        "appsettings.Local.json",
+        optional: true,
+        reloadOnChange: true
+    );
+    builder.Configuration.AddEnvironmentVariables().AddCommandLine(args);
+}
 
 builder.Services.AddControllers();
 
@@ -14,62 +22,7 @@ var connectionString = builder.Configuration.GetConnectionString("PokerDatabase"
 
 builder.Services.AddDatabase(connectionString);
 
-builder.Services.AddHandImporting();
-
-var importStorageProvider = builder.Configuration["HandImportStorage:Provider"] ?? "Local";
-if (string.Equals(importStorageProvider, "Garage", StringComparison.OrdinalIgnoreCase))
-{
-    var endpoint =
-        builder.Configuration["HandImportStorage:Endpoint"] ?? "http://localhost:3900";
-
-    var region = builder.Configuration["HandImportStorage:Region"] ?? "garage";
-    if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var serviceUri)
-        || serviceUri.Scheme is not ("http" or "https"))
-    {
-        throw new InvalidOperationException(
-            "HandImportStorage:Endpoint must be an absolute HTTP or HTTPS URL."
-        );
-    }
-
-    var s3Config = new AmazonS3Config
-    {
-        ServiceURL = endpoint,
-        ForcePathStyle = true,
-        AuthenticationRegion = region,
-    };
-    var accessKey = builder.Configuration["HandImportStorage:AccessKey"];
-    var secretKey = builder.Configuration["HandImportStorage:SecretKey"];
-    if (string.IsNullOrWhiteSpace(accessKey) != string.IsNullOrWhiteSpace(secretKey))
-    {
-        throw new InvalidOperationException(
-            "HandImportStorage:AccessKey and HandImportStorage:SecretKey must be configured together."
-        );
-    }
-
-    if (!string.IsNullOrWhiteSpace(accessKey))
-    {
-        var credentials = new BasicAWSCredentials(accessKey, secretKey);
-        builder.Services.AddSingleton<IAmazonS3>(_ =>
-            new AmazonS3Client(credentials, s3Config)
-        );
-    }
-    else
-    {
-        builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(s3Config));
-    }
-
-    builder.Services.AddSingleton<IHandFileStore>(serviceProvider =>
-        new GarageHandFileStore(
-            serviceProvider.GetRequiredService<IAmazonS3>()
-        )
-    );
-}
-else
-{
-    throw new InvalidOperationException(
-        $"Unsupported hand import storage provider '{importStorageProvider}'."
-    );
-}
+builder.Services.AddHandImporting(builder.Configuration);
 
 builder.Services.AddOpenApi(options =>
 {
