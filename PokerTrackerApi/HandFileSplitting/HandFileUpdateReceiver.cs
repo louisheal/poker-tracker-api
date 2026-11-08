@@ -3,15 +3,16 @@ using PokerTrackerApi.Domain;
 
 namespace PokerTrackerApi.HandFileSplitting;
 
-public class HandFileUpdatesReceiver : ICapSubscribe
+public class HandFileUpdateReceiver : ICapSubscribe
 {
     private readonly IGrainFactory _grainFactory;
 
-    public HandFileUpdatesReceiver(IGrainFactory grainFactory)
+    public HandFileUpdateReceiver(IGrainFactory grainFactory)
     {
         _grainFactory = grainFactory;
     }
 
+    // TODO : move into consts
     [CapSubscribe("HandFileUpdates", Group = "hand-splitting")]
     public async Task HandleAsync(HandFileStored message, CancellationToken cancellationToken)
     {

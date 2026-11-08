@@ -7,7 +7,7 @@ public static class HandFileSplittingConfiguration
         public IServiceCollection AddHandFileSplitting()
         {
             services.AddSingleton<IHandFileSplitter, GgPokerHandFileSplitter>();
-            services.AddTransient<HandFileUpdatesReceiver>();
+            services.AddTransient<HandFileUpdateReceiver>();
 
             return services;
         }

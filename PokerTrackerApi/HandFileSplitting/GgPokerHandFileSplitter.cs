@@ -56,7 +56,6 @@ public partial class GgPokerHandFileSplitter : IHandFileSplitter
         }
     }
 
-    // TODO : can this be written as an extension method ?
     private static async IAsyncEnumerable<string> ReadLinesAsync(
         TextReader reader,
         [EnumeratorCancellation] CancellationToken cancellationToken

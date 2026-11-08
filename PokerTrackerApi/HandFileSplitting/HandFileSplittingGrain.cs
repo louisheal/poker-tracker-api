@@ -1,5 +1,6 @@
 using DotNetCore.CAP;
 using PokerTrackerApi.Domain;
+using PokerTrackerApi.HandFileMetadata;
 using PokerTrackerApi.HandFileStorage;
 
 namespace PokerTrackerApi.HandFileSplitting;
@@ -11,13 +12,14 @@ public interface IHandFileSplittingGrain : IGrainWithGuidKey
 
 public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
 {
+    // TODO : move into consts names
     private const string TOPIC_NAME = "RawHandUpdates";
 
     private readonly IGrainContext _grainContext;
     private readonly IPersistentState<HandFileSplittingGrainState> _state;
     private readonly IHandFileStorage _handFileStorage;
     private readonly IHandFileSplitter _handFileSplitter;
-    // TODO : should this grain have a direct dependency on CAP
+    private readonly IHandFileMetadataRepository _repository;
     private readonly ICapPublisher _capPublisher;
 
     public HandFileSplittingGrain(
@@ -26,6 +28,7 @@ public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
         IGrainContext grainContext,
         IHandFileStorage handFileStorage,
         IHandFileSplitter handFileSplitter,
+        IHandFileMetadataRepository repository,
         ICapPublisher capPublisher
     )
     {
@@ -33,6 +36,7 @@ public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
         _grainContext = grainContext;
         _handFileStorage = handFileStorage;
         _handFileSplitter = handFileSplitter;
+        _repository = repository;
         _capPublisher = capPublisher;
     }
 
@@ -61,6 +65,9 @@ public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
             var state = _state.State with { LastProcessedHandId = rawHand.HandId };
             await SaveState(state, cancellationToken);
         }
+
+        await _handFileStorage.RemoveAsync(fileId, cancellationToken);
+        await _repository.MarkCompletedAsync(fileId, cancellationToken);
     }
 
     private async Task SaveState(HandFileSplittingGrainState state, CancellationToken cancellationToken)

@@ -1,29 +1,29 @@
 using System.Data;
 
-namespace PokerTrackerApi.HandImporting.Repository;
+namespace PokerTrackerApi.HandFileMetadata;
 
-public interface IHandImportRepository
+public interface IHandFileMetadataRepository
 {
-    Task<Guid> CreateStartedAsync(
+    Task<Guid> CreateMetadataAsync(
         string fileName,
-        IDbConnection connection,
         CancellationToken cancellationToken
     );
     Task<IReadOnlyList<Guid>> GetIdsCreatedBeforeAsync(
         int limit,
         DateTimeOffset createdBefore,
-        IDbConnection connection,
         CancellationToken cancellationToken
     );
     Task<bool> MarkStoredAsync(
         Guid fileId,
-        IDbConnection connection,
-        IDbTransaction transaction,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        IDbTransaction? transaction = null
     );
     Task MarkFailedAsync(
         Guid fileId,
-        IDbConnection connection,
+        CancellationToken cancellationToken
+    );
+    Task MarkCompletedAsync(
+        Guid fileId,
         CancellationToken cancellationToken
     );
 }

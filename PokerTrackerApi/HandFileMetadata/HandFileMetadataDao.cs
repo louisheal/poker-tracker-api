@@ -1,4 +1,4 @@
-namespace PokerTrackerApi.HandImporting.Repository;
+namespace PokerTrackerApi.HandFileMetadata;
 
 public class HandFileMetadataDao
 {

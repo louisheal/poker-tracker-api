@@ -1,14 +1,14 @@
 using Microsoft.Extensions.Options;
 using PokerTrackerApi.Database;
-using PokerTrackerApi.HandImporting.Repository;
 using PokerTrackerApi.HandFileStorage;
+using PokerTrackerApi.HandFileMetadata;
 
 namespace PokerTrackerApi.HandImporting.Reconciliation;
 
 public class HandImportReconciliationService : BackgroundService
 {
     private readonly IHandFileStorage _store;
-    private readonly IHandImportRepository _repository;
+    private readonly IHandFileMetadataRepository _repository;
     private readonly IPokerDatabaseConnectionFactory _connectionFactory;
     private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _pollInterval;
@@ -17,7 +17,7 @@ public class HandImportReconciliationService : BackgroundService
 
     public HandImportReconciliationService(
         IHandFileStorage store,
-        IHandImportRepository repository,
+        IHandFileMetadataRepository repository,
         IPokerDatabaseConnectionFactory connectionFactory,
         IOptions<HandImportReconciliationOptions> options,
         TimeProvider timeProvider
@@ -50,7 +50,6 @@ public class HandImportReconciliationService : BackgroundService
         var staleHandFiles = await _repository.GetIdsCreatedBeforeAsync(
             _batchSize,
             staleBefore,
-            connection,
             cancellationToken
         );
 
@@ -65,6 +64,6 @@ public class HandImportReconciliationService : BackgroundService
         await _store.RemoveAsync(fileId, cancellationToken);
 
         await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
-        await _repository.MarkFailedAsync(fileId, connection, cancellationToken);
+        await _repository.MarkFailedAsync(fileId, cancellationToken);
     }
 }
