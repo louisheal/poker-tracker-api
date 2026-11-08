@@ -1,6 +1,9 @@
+using System.Data.Common;
 using Microsoft.OpenApi;
+using MySqlConnector;
 using Orleans.Configuration;
 using PokerTrackerApi.Database;
+using PokerTrackerApi.HandFileSplitting;
 using PokerTrackerApi.HandImporting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +26,9 @@ var connectionString = builder.Configuration.GetConnectionString("PokerDatabase"
 builder.Services.AddDatabase(connectionString);
 
 builder.Services.AddHandImporting(builder.Configuration);
+builder.Services.AddHandFileSplitting();
+
+DbProviderFactories.RegisterFactory("MySql.Data.MySqlConnector", MySqlConnectorFactory.Instance);
 
 builder.Services.AddOpenApi(options =>
 {
@@ -86,6 +92,11 @@ builder.Host.UseOrleans(siloBuilder =>
     {
         options.ClusterId = "poker-tracker-dev";
         options.ServiceId = "poker-tracker";
+    });
+    siloBuilder.AddAdoNetGrainStorage("Default", options =>
+    {
+        options.Invariant = "MySql.Data.MySqlConnector";
+        options.ConnectionString = connectionString;
     });
 });
 

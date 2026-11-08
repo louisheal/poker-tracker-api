@@ -29,25 +29,13 @@ public partial class GgPokerHandFileSplitter : IHandFileSplitter
             var handHeader = HandHeaderRegex().Match(line);
             if (handHeader.Success)
             {
-                handId = handHeader.Groups["id"].Value;
-
-                if (rawText != null)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    yield return new RawHand(handId, rawText.ToString());
-                }
-
-                rawText = new StringBuilder();
-            }
-
-            if (line.StartsWith("Poker Hand #", StringComparison.Ordinal))
-            {
                 if (rawText != null)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     yield return new RawHand(handId!, rawText.ToString());
                 }
 
+                handId = handHeader.Groups["id"].Value;
                 rawText = new StringBuilder();
             }
 

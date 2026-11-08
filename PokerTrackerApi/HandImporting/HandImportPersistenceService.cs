@@ -20,16 +20,19 @@ public class HandImportPersistenceService : IHandImportPersistenceService
     private readonly IHandImportRepository _repository;
     private readonly IPokerDatabaseConnectionFactory _connectionFactory;
     private readonly ICapPublisher _capPublisher;
+    private readonly ILogger<HandImportPersistenceService> _logger;
 
     public HandImportPersistenceService(
         IHandImportRepository repository,
         IPokerDatabaseConnectionFactory connectionFactory,
-        ICapPublisher capPublisher
+        ICapPublisher capPublisher,
+        ILogger<HandImportPersistenceService> logger
     )
     {
         _repository = repository;
         _connectionFactory = connectionFactory;
         _capPublisher = capPublisher;
+        _logger = logger;
     }
 
     public async Task<Guid> CreateStartedAsync(

@@ -38,6 +38,8 @@ public static class HandImportingConfiguration
             {
                 cap.UseMySql(options => options.ConnectionString = connectionString);
                 cap.UseKafka(options => options.Servers = kafkaBootstrapServers);
+
+                cap.EnableSubscriberParallelExecute = true;
             });
 
             services.AddGarage(configuration);
