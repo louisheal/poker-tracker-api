@@ -49,8 +49,9 @@ public class MySqlHandFileMetadataRepository : IHandFileMetadataRepository
 
     public async Task<bool> MarkStoredAsync(
         Guid fileId,
-        CancellationToken cancellationToken,
-        IDbTransaction? transaction = null
+        IDbTransaction transaction,
+        IDbConnection connection,
+        CancellationToken cancellationToken
     )
     {
         const string query = """
@@ -59,9 +60,6 @@ public class MySqlHandFileMetadataRepository : IHandFileMetadataRepository
                 WHERE FileId = @FileId
             """;
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(
-            cancellationToken
-        );
         var updatedRows = await connection.ExecuteAsync(
             new CommandDefinition(
                 query,

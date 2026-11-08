@@ -40,6 +40,7 @@ public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
         _capPublisher = capPublisher;
     }
 
+    // TODO : track isCompleted so you can skip replays
     public async Task ProcessHandFileAsync(CancellationToken cancellationToken)
     {
         var isPastCheckpoint = false;

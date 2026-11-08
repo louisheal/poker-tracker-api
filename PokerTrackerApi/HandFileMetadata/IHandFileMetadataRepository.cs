@@ -15,8 +15,9 @@ public interface IHandFileMetadataRepository
     );
     Task<bool> MarkStoredAsync(
         Guid fileId,
-        CancellationToken cancellationToken,
-        IDbTransaction? transaction = null
+        IDbTransaction transaction,
+        IDbConnection connection,
+        CancellationToken cancellationToken
     );
     Task MarkFailedAsync(
         Guid fileId,

@@ -65,8 +65,9 @@ public class HandImportService : IHandImportService
 
         var markedStored = await _repository.MarkStoredAsync(
             fileId,
-            cancellationToken,
-            transaction: dbTransaction
+            dbTransaction,
+            connection,
+            cancellationToken
         );
 
         if (!markedStored)
