@@ -12,8 +12,7 @@ public class HandFileUpdateReceiver : ICapSubscribe
         _grainFactory = grainFactory;
     }
 
-    // TODO : move into consts
-    [CapSubscribe("HandFileUpdates", Group = "hand-splitting")]
+    [CapSubscribe(PokerTrackerNames.HandFileUpdatesTopic, Group = "hand-splitting")]
     public async Task HandleAsync(HandFileStored message, CancellationToken cancellationToken)
     {
         var grain = _grainFactory.GetGrain<IHandFileSplittingGrain>(message.FileId);

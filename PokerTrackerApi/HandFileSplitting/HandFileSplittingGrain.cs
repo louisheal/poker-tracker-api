@@ -12,9 +12,6 @@ public interface IHandFileSplittingGrain : IGrainWithGuidKey
 
 public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
 {
-    // TODO : move into consts names
-    private const string TOPIC_NAME = "RawHandUpdates";
-
     private readonly IGrainContext _grainContext;
     private readonly IPersistentState<HandFileSplittingGrainState> _state;
     private readonly IHandFileStorage _handFileStorage;
@@ -40,14 +37,27 @@ public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
         _capPublisher = capPublisher;
     }
 
-    // TODO : track isCompleted so you can skip replays
     public async Task ProcessHandFileAsync(CancellationToken cancellationToken)
     {
-        var isPastCheckpoint = false;
-
         var fileId = _grainContext.GrainId.GetGuidKey();
+
+        if (!_state.State.IsCompleted)
+        {
+            await Handle(fileId, cancellationToken);
+        }
+
+        await _handFileStorage.RemoveAsync(fileId, cancellationToken);
+        await _repository.MarkCompletedAsync(fileId, cancellationToken);
+        
+        var state = _state.State with { IsCompleted = true };
+        await SaveState(state, cancellationToken);
+    }
+
+    private async Task Handle(Guid fileId, CancellationToken cancellationToken)
+    {
         await using var handFile = await _handFileStorage.OpenReadAsync(fileId, cancellationToken);
 
+        var isPastCheckpoint = false;
         await foreach (var rawHand in _handFileSplitter.SplitHandsAsync(handFile, cancellationToken))
         {
             if (!isPastCheckpoint)
@@ -58,7 +68,7 @@ public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
             }
 
             await _capPublisher.PublishAsync(
-                TOPIC_NAME,
+                PokerTrackerNames.RawHandUpdatesTopic,
                 new HandExtracted(rawHand.RawText),
                 cancellationToken: cancellationToken
             );
@@ -66,9 +76,6 @@ public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
             var state = _state.State with { LastProcessedHandId = rawHand.HandId };
             await SaveState(state, cancellationToken);
         }
-
-        await _handFileStorage.RemoveAsync(fileId, cancellationToken);
-        await _repository.MarkCompletedAsync(fileId, cancellationToken);
     }
 
     private async Task SaveState(HandFileSplittingGrainState state, CancellationToken cancellationToken)
@@ -88,5 +95,6 @@ public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
     public record HandFileSplittingGrainState
     {
         public string? LastProcessedHandId { get; set; } = null;
+        public bool IsCompleted { get; set; } = false;
     }
 }

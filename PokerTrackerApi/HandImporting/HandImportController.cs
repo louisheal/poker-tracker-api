@@ -25,8 +25,6 @@ public class HandImportController : ControllerBase
             return BadRequest("At least one file is required.");
         }
 
-        // TODO : add try/catch ?
-        await _service.ImportFiles(files, cancellationToken);
-        return NoContent();
+        return Ok(await _service.ImportFiles(files, cancellationToken));
     }
 }

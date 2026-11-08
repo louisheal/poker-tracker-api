@@ -8,7 +8,7 @@ namespace PokerTrackerApi.HandImporting;
 
 public interface IHandImportService
 {
-    Task ImportFiles(IReadOnlyCollection<IFormFile> files, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Guid>> ImportFiles(IReadOnlyCollection<IFormFile> files, CancellationToken cancellationToken);
 }
 
 public class HandImportService : IHandImportService
@@ -33,18 +33,22 @@ public class HandImportService : IHandImportService
         _capPublisher = capPublisher;
     }
 
-    public async Task ImportFiles(
+    public async Task<IReadOnlyList<Guid>> ImportFiles(
         IReadOnlyCollection<IFormFile> files,
         CancellationToken cancellationToken
     )
     {
+        var fileIds = new List<Guid>();
         foreach (var file in files)
         {
-            await ImportFile(file, cancellationToken);
+            var fileId = await ImportFile(file, cancellationToken);
+            fileIds.Add(fileId);
         }
+
+        return fileIds;
     }
 
-    private async Task ImportFile(IFormFile file, CancellationToken cancellationToken)
+    private async Task<Guid> ImportFile(IFormFile file, CancellationToken cancellationToken)
     {
         await using var connection = await _connectionFactory.OpenConnectionAsync(
             cancellationToken
@@ -82,5 +86,7 @@ public class HandImportService : IHandImportService
         );
 
         transaction.Commit();
+
+        return fileId;
     }
 }
