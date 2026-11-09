@@ -1,5 +1,5 @@
 using DotNetCore.CAP;
-using PokerTrackerApi.Domain;
+using PokerTrackerApi.Domain.Messages;
 using PokerTrackerApi.HandFileMetadata;
 using PokerTrackerApi.HandFileStorage;
 
@@ -69,7 +69,7 @@ public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
 
             await _capPublisher.PublishAsync(
                 PokerTrackerNames.RawHandUpdatesTopic,
-                new HandExtracted(rawHand.RawText),
+                new HandExtracted(rawHand.HandId, rawHand.RawText),
                 cancellationToken: cancellationToken
             );
 

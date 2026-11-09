@@ -1,5 +1,5 @@
 using DotNetCore.CAP;
-using PokerTrackerApi.Domain;
+using PokerTrackerApi.Domain.Messages;
 
 namespace PokerTrackerApi.HandFileSplitting;
 

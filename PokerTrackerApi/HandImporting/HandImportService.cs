@@ -1,6 +1,6 @@
 using DotNetCore.CAP;
 using PokerTrackerApi.Database;
-using PokerTrackerApi.Domain;
+using PokerTrackerApi.Domain.Messages;
 using PokerTrackerApi.HandFileMetadata;
 using PokerTrackerApi.HandFileStorage;
 
