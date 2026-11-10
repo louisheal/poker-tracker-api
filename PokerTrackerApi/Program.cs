@@ -5,6 +5,7 @@ using PokerTrackerApi.HandFileMetadata;
 using PokerTrackerApi.HandFileSplitting;
 using PokerTrackerApi.HandFileStorage;
 using PokerTrackerApi.HandImporting;
+using PokerTrackerApi.HandParsing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,9 +28,11 @@ builder.Services.AddDatabase(connectionString);
 
 builder.Services.AddHandFileMetadata();
 builder.Services.AddGarage(builder.Configuration);
-ServiceConfiguration.AddCapMessaging(builder.Services, builder.Configuration);
 builder.Services.AddHandImporting(builder.Configuration);
 builder.Services.AddHandFileSplitting();
+builder.Services.AddHandParsing();
+
+ServiceConfiguration.AddCapMessaging(builder.Services, builder.Configuration);
 
 builder.Services.AddOpenApi(options =>
 {

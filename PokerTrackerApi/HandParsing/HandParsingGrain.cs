@@ -1,3 +1,7 @@
+using DotNetCore.CAP;
+using PokerTrackerApi.Domain.HandHistories;
+using PokerTrackerApi.Domain.Messages;
+
 namespace PokerTrackerApi.HandParsing;
 
 public interface IHandParsingGrain : IGrainWithStringKey
@@ -5,10 +9,29 @@ public interface IHandParsingGrain : IGrainWithStringKey
     Task ParseHand(string rawHand, CancellationToken cancellationToken);
 }
 
-public class HandParsingGrain : Grain, IHandParsingGrain
+public class HandParsingGrain(
+    IHandHistoryParser handHistoryParser,
+    ICapPublisher capPublisher
+) : Grain, IHandParsingGrain
 {
-    public async Task ParseHand(string rawHand, CancellationToken cancellationToken)
+    // TODO : accept a RawHandHistory record containing Id and Text as strings
+    public async Task ParseHand(string handHistoryText, CancellationToken cancellationToken)
     {
-        // throw new NotImplementedException();
+        HandHistory handHistory;
+        try
+        {
+            handHistory = handHistoryParser.ParseHandHistory(handHistoryText);
+        }
+        catch (FormatException)
+        {
+            // TODO : log
+            return;
+        }
+
+        await capPublisher.PublishAsync(
+            PokerTrackerNames.HandHistoriesTopic,
+            new HandHistoryParsed(handHistory.HandId, handHistory),
+            cancellationToken: cancellationToken
+        );
     }
 }

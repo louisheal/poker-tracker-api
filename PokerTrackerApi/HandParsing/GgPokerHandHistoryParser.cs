@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using PokerTrackerApi.Domain;
@@ -7,7 +6,7 @@ using PokerTrackerApi.Domain.HandHistories.Events;
 
 namespace PokerTrackerApi.HandParsing;
 
-public partial class GgPokerHandParser : IPokerHandParser
+public partial class GgPokerHandHistoryParser : IHandHistoryParser
 {
     private static readonly PokerPosition[] PositionByButtonOffset =
     [
@@ -86,28 +85,11 @@ public partial class GgPokerHandParser : IPokerHandParser
     )]
     private static partial Regex RaiseRegex();
 
-    public HandHistoryParseResult ParseHand(string rawHand)
+    public HandHistory ParseHandHistory(string rawText)
     {
-        if (!TryParseHand(rawHand, out var handHistory, out var error))
-        {
-            return new HandHistoryParseFailure(error);
-        }
-        return new HandHistoryParseSuccess(handHistory);
-    }
-
-    private static bool TryParseHand(
-        string rawText,
-        [NotNullWhen(true)] out HandHistory? handHistory,
-        [NotNullWhen(false)] out string? error
-    )
-    {
-        handHistory = null;
-        error = null;
-
         if (string.IsNullOrWhiteSpace(rawText))
         {
-            error = "The hand text is empty.";
-            return false;
+            throw new FormatException("The hand text is empty.");
         }
 
         var lines = rawText.Split('\n').Select(line => line.TrimEnd('\r')).ToArray();
@@ -124,8 +106,7 @@ public partial class GgPokerHandParser : IPokerHandParser
             )
         )
         {
-            error = "The hand header or timestamp is invalid.";
-            return false;
+            throw new FormatException("The hand header or timestamp is invalid.");
         }
 
         if (
@@ -136,16 +117,14 @@ public partial class GgPokerHandParser : IPokerHandParser
             || smallBlind < 0
         )
         {
-            error = "The hand header or blind values are invalid.";
-            return false;
+            throw new FormatException("The hand header or blind values are invalid.");
         }
 
         var buttonMatches = ButtonLineRegex().Matches(rawText);
         var seatMatches = SeatLineRegex().Matches(rawText);
         if (buttonMatches.Count != 1 || seatMatches.Count != 6)
         {
-            error = "Expected one six-max button and six seat lines.";
-            return false;
+            throw new FormatException("Expected one six-max button and six seat lines.");
         }
 
         if (
@@ -157,8 +136,7 @@ public partial class GgPokerHandParser : IPokerHandParser
             )
         )
         {
-            error = "The button seat is invalid.";
-            return false;
+            throw new FormatException("The button seat is invalid.");
         }
 
         var seenSeats = new HashSet<int>();
@@ -174,8 +152,7 @@ public partial class GgPokerHandParser : IPokerHandParser
                 ) || !TryParseCashAmount(seatMatch.Groups["stack"].Value, out var startingStack)
             )
             {
-                error = "A seat number or starting stack is invalid.";
-                return false;
+                throw new FormatException("A seat number or starting stack is invalid.");
             }
 
             var name = seatMatch.Groups["player"].Value;
@@ -188,22 +165,19 @@ public partial class GgPokerHandParser : IPokerHandParser
                 )
             )
             {
-                error = "The hand contains duplicate seat data.";
-                return false;
+                throw new FormatException("The hand contains duplicate seat data.");
             }
         }
 
         if (!players.ContainsKey("Hero"))
         {
-            error = "The hand does not contain a Hero seat.";
-            return false;
+            throw new FormatException("The hand does not contain a Hero seat.");
         }
 
         var holeCardsMatches = HoleCardsLineRegex().Matches(rawText);
         if (holeCardsMatches.Count != 1)
         {
-            error = "Expected exactly one valid Hero hole-card line.";
-            return false;
+            throw new FormatException("Expected exactly one valid Hero hole-card line.");
         }
 
         var holeCardsMatch = holeCardsMatches[0];
@@ -219,8 +193,9 @@ public partial class GgPokerHandParser : IPokerHandParser
             {
                 if (!TryGetLastBracketedCards(line, 3, out var cards))
                 {
-                    error = "The flop section does not contain exactly three cards.";
-                    return false;
+                    throw new FormatException(
+                        "The flop section does not contain exactly three cards."
+                    );
                 }
 
                 events.Add(
@@ -239,8 +214,7 @@ public partial class GgPokerHandParser : IPokerHandParser
             {
                 if (!TryGetLastBracketedCards(line, 1, out var cards))
                 {
-                    error = "The turn section does not contain one dealt card.";
-                    return false;
+                    throw new FormatException("The turn section does not contain one dealt card.");
                 }
 
                 events.Add(
@@ -253,8 +227,9 @@ public partial class GgPokerHandParser : IPokerHandParser
             {
                 if (!TryGetLastBracketedCards(line, 1, out var cards))
                 {
-                    error = "The river section does not contain one dealt card.";
-                    return false;
+                    throw new FormatException(
+                        "The river section does not contain one dealt card."
+                    );
                 }
 
                 events.Add(
@@ -275,8 +250,7 @@ public partial class GgPokerHandParser : IPokerHandParser
                     )
                 )
                 {
-                    error = "An uncalled bet return is invalid.";
-                    return false;
+                    throw new FormatException("An uncalled bet return is invalid.");
                 }
 
                 events.Add(
@@ -301,8 +275,7 @@ public partial class GgPokerHandParser : IPokerHandParser
                     )
                 )
                 {
-                    error = "A pot award is invalid.";
-                    return false;
+                    throw new FormatException("A pot award is invalid.");
                 }
 
                 events.Add(
@@ -324,8 +297,7 @@ public partial class GgPokerHandParser : IPokerHandParser
                     .ToArray();
                 if (cashDrop.Any(amount => amount < 0))
                 {
-                    error = "A cash-drop amount is invalid.";
-                    return false;
+                    throw new FormatException("A cash-drop amount is invalid.");
                 }
 
                 var totalCashDrop = cashDrop.Sum();
@@ -343,8 +315,7 @@ public partial class GgPokerHandParser : IPokerHandParser
                 var playerId = cardsShown.Groups["player"].Value;
                 if (!players.ContainsKey(playerId))
                 {
-                    error = "Shown cards refer to an unknown player.";
-                    return false;
+                    throw new FormatException("Shown cards refer to an unknown player.");
                 }
 
                 events.Add(
@@ -380,24 +351,17 @@ public partial class GgPokerHandParser : IPokerHandParser
                 continue;
             }
 
-            if (
-                !TryParsePlayerAction(
+            events.Add(
+                ParsePlayerAction(
                     actionMatch.Groups["player"].Value,
                     actionText,
                     bigBlind,
-                    events.Count,
-                    out var playerAction
+                    events.Count
                 )
-            )
-            {
-                error = $"Unsupported player action: {line}";
-                return false;
-            }
-
-            events.Add(playerAction);
+            );
         }
 
-        handHistory = new HandHistory(
+        return new HandHistory(
             handHeader.Groups["id"].Value,
             "Hero",
             holeCards,
@@ -405,28 +369,23 @@ public partial class GgPokerHandParser : IPokerHandParser
             events,
             timestamp
         );
-        return true;
     }
 
-    private static bool TryParsePlayerAction(
+    private static HandHistoryEvent ParsePlayerAction(
         string playerId,
         string actionText,
         decimal bigBlind,
-        int sequence,
-        [NotNullWhen(true)] out HandHistoryEvent? handEvent
+        int sequence
     )
     {
-        handEvent = null;
         if (actionText.StartsWith("folds", StringComparison.Ordinal))
         {
-            handEvent = new PlayerFoldEvent(sequence, playerId);
-            return true;
+            return new PlayerFoldEvent(sequence, playerId);
         }
 
         if (actionText.StartsWith("checks", StringComparison.Ordinal))
         {
-            handEvent = new PlayerCheckEvent(sequence, playerId);
-            return true;
+            return new PlayerCheckEvent(sequence, playerId);
         }
 
         var antePost = AntePostRegex().Match(actionText);
@@ -434,11 +393,10 @@ public partial class GgPokerHandParser : IPokerHandParser
         {
             if (!TryParseBigBlindAmount(antePost.Groups["amount"].Value, bigBlind, out var amount))
             {
-                return false;
+                throw new FormatException("An ante post amount is invalid.");
             }
 
-            handEvent = new AntePostEvent(sequence, playerId, PostType.Ante, amount);
-            return true;
+            return new AntePostEvent(sequence, playerId, PostType.Ante, amount);
         }
 
         var smallBlindPost = SmallBlindPostRegex().Match(actionText);
@@ -452,16 +410,15 @@ public partial class GgPokerHandParser : IPokerHandParser
                 )
             )
             {
-                return false;
+                throw new FormatException("A small blind post amount is invalid.");
             }
 
-            handEvent = new SmallBlindPostEvent(
+            return new SmallBlindPostEvent(
                 sequence,
                 playerId,
                 PostType.SmallBlind,
                 amount
             );
-            return true;
         }
 
         var bigBlindPost = BigBlindPostRegex().Match(actionText);
@@ -475,16 +432,15 @@ public partial class GgPokerHandParser : IPokerHandParser
                 )
             )
             {
-                return false;
+                throw new FormatException("A big blind post amount is invalid.");
             }
 
-            handEvent = new BigBlindPostEvent(
+            return new BigBlindPostEvent(
                 sequence,
                 playerId,
                 PostType.BigBlind,
                 amount
             );
-            return true;
         }
 
         var call = CallRegex().Match(actionText);
@@ -492,11 +448,10 @@ public partial class GgPokerHandParser : IPokerHandParser
         {
             if (!TryParseBigBlindAmount(call.Groups["amount"].Value, bigBlind, out var amount))
             {
-                return false;
+                throw new FormatException("A call amount is invalid.");
             }
 
-            handEvent = new PlayerCallEvent(sequence, playerId, amount);
-            return true;
+            return new PlayerCallEvent(sequence, playerId, amount);
         }
 
         var bet = BetRegex().Match(actionText);
@@ -504,11 +459,10 @@ public partial class GgPokerHandParser : IPokerHandParser
         {
             if (!TryParseBigBlindAmount(bet.Groups["amount"].Value, bigBlind, out var amount))
             {
-                return false;
+                throw new FormatException("A bet amount is invalid.");
             }
 
-            handEvent = new PlayerBetEvent(sequence, playerId, amount);
-            return true;
+            return new PlayerBetEvent(sequence, playerId, amount);
         }
 
         var raise = RaiseRegex().Match(actionText);
@@ -523,10 +477,10 @@ public partial class GgPokerHandParser : IPokerHandParser
                 )
             )
             {
-                return false;
+                throw new FormatException("A raise amount is invalid.");
             }
 
-            handEvent = new PlayerRaiseEvent(
+            return new PlayerRaiseEvent(
                 sequence,
                 playerId,
                 amount,
@@ -535,10 +489,9 @@ public partial class GgPokerHandParser : IPokerHandParser
                     .Groups["suffix"]
                     .Value.Contains("is all-in", StringComparison.OrdinalIgnoreCase)
             );
-            return true;
         }
 
-        return false;
+        throw new FormatException($"Unsupported player action: {playerId}: {actionText}");
     }
 
     private static bool TryGetLastBracketedCards(string line, int expectedCount, out string[] cards)

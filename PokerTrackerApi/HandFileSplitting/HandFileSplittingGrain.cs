@@ -67,6 +67,8 @@ public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
                 continue;
             }
 
+            // TODO : save raw text to db for reprocessing
+
             await _capPublisher.PublishAsync(
                 PokerTrackerNames.RawHandUpdatesTopic,
                 new HandExtracted(rawHand.HandId, rawHand.RawText),
@@ -92,9 +94,13 @@ public class HandFileSplittingGrain : Grain, IHandFileSplittingGrain
         }
     }
 
+    [GenerateSerializer]
     public record HandFileSplittingGrainState
     {
+        [Id(0)]
         public string? LastProcessedHandId { get; set; } = null;
+
+        [Id(1)]
         public bool IsCompleted { get; set; } = false;
     }
 }

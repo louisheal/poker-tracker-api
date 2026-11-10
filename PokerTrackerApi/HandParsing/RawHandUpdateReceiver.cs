@@ -15,7 +15,15 @@ public class RawHandUpdateReceiver : ICapSubscribe
     [CapSubscribe(PokerTrackerNames.RawHandUpdatesTopic, Group = "hand-parsing")]
     public async Task HandleAsync(HandExtracted message, CancellationToken cancellationToken)
     {
-        var grain = _grainFactory.GetGrain<IHandParsingGrain>(message.HandId);
-        await grain.ParseHand(message.RawText, cancellationToken);
+        try
+        {
+            var grain = _grainFactory.GetGrain<IHandParsingGrain>(message.HandId);
+            await grain.ParseHand(message.RawText, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Console.WriteLine(message.RawText);
+        }
     }
 }
