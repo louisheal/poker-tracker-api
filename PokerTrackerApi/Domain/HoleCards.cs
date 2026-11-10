@@ -1,11 +1,7 @@
 namespace PokerTrackerApi.Domain;
 
-public record HoleCards
+public record HoleCards(PlayingCard First, PlayingCard Second)
 {
-    public required PlayingCard First { get; init; }
-
-    public required PlayingCard Second { get; init; }
-
     public string HandKey()
     {
         var firstRank = First.Rank;
@@ -32,6 +28,6 @@ public record HoleCards
         var secondSuit = SuitExtensions.FromCode(second[1]);
         var secondCard = new PlayingCard(secondRank, secondSuit);
 
-        return new HoleCards { First = firstCard, Second = secondCard };
+        return new HoleCards(firstCard, secondCard);
     }
 }
