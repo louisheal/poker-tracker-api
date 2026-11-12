@@ -1,6 +1,7 @@
 namespace PokerTrackerApi.Domain;
 
-public record HoleCards(PlayingCard First, PlayingCard Second)
+[GenerateSerializer]
+public record HoleCards([property: Id(0)] PlayingCard First, [property: Id(1)] PlayingCard Second)
 {
     public string HandKey()
     {

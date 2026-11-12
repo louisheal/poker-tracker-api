@@ -1,4 +1,5 @@
 namespace PokerTrackerApi.Domain.HandHistories.Events;
 
-public record PotAwardedEvent(int Sequence, string PlayerId, decimal AmountBB)
+[GenerateSerializer]
+public record PotAwardedEvent(int Sequence, [property: Id(1)] string PlayerId, [property: Id(2)] decimal AmountBB)
     : HandHistoryEvent(Sequence);

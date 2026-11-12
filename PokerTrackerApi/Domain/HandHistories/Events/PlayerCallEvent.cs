@@ -1,4 +1,5 @@
 namespace PokerTrackerApi.Domain.HandHistories.Events;
 
-public record PlayerCallEvent(int Sequence, string PlayerId, decimal CallAmountBB)
+[GenerateSerializer]
+public record PlayerCallEvent(int Sequence, string PlayerId, [property: Id(2)] decimal CallAmountBB)
     : PlayerActionEvent(Sequence, PlayerId);

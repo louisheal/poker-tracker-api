@@ -1,5 +1,6 @@
 namespace PokerTrackerApi.Domain.HandHistories.Events;
 
+[GenerateSerializer]
 public record AntePostEvent(
     int Sequence,
     string PlayerId,

@@ -1,3 +1,4 @@
 namespace PokerTrackerApi.Domain;
 
-public record PlayingCard(Rank Rank, Suit Suit);
+[GenerateSerializer]
+public record PlayingCard([property: Id(0)] Rank Rank, [property: Id(1)] Suit Suit);

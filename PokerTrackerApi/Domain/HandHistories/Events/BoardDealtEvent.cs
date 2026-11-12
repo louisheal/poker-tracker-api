@@ -1,4 +1,5 @@
 namespace PokerTrackerApi.Domain.HandHistories.Events;
 
-public abstract record BoardDealtEvent(int Sequence, PokerStreet Street)
+[GenerateSerializer]
+public abstract record BoardDealtEvent(int Sequence, [property: Id(1)] PokerStreet Street)
     : HandHistoryEvent(Sequence);

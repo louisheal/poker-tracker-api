@@ -1,4 +1,9 @@
 namespace PokerTrackerApi.Domain.HandHistories.Events;
 
-public record CardsShownEvent(int Sequence, string PlayerId, HoleCards HoleCards)
+[GenerateSerializer]
+public record CardsShownEvent(
+    int Sequence,
+    [property: Id(1)] string PlayerId,
+    [property: Id(2)] HoleCards HoleCards
+)
     : HandHistoryEvent(Sequence);

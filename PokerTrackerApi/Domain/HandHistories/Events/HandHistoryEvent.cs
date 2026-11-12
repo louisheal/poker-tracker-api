@@ -18,4 +18,5 @@ namespace PokerTrackerApi.Domain.HandHistories.Events;
 [JsonDerivedType(typeof(SmallBlindPostEvent), "small-blind-post")]
 [JsonDerivedType(typeof(TurnDealtEvent), "turn-dealt")]
 [JsonDerivedType(typeof(UncalledBetReturnedEvent), "uncalled-bet-returned")]
-public abstract record HandHistoryEvent(int Sequence);
+[GenerateSerializer]
+public abstract record HandHistoryEvent([property: Id(0)] int Sequence);

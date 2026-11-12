@@ -1,5 +1,6 @@
 namespace PokerTrackerApi.Domain.HandHistories.Events;
 
+[GenerateSerializer]
 public record SmallBlindPostEvent(
     int Sequence,
     string PlayerId,
