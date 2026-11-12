@@ -29,7 +29,7 @@ public class HandParsingGrain(
         }
 
         await capPublisher.PublishAsync(
-            PokerTrackerNames.HandHistoriesTopic,
+            PokerTrackerNames.HandHistoryUpdatesTopic,
             new HandHistoryParsed(handHistory.HandId, handHistory),
             cancellationToken: cancellationToken
         );

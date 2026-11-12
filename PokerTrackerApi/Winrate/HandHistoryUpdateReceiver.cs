@@ -12,7 +12,7 @@ public class HandHistoryUpdateReceiver : ICapSubscribe
         _grainFactory = grainFactory;
     }
 
-    [CapSubscribe(PokerTrackerNames.HandFileUpdatesTopic, Group = "winrate")]
+    [CapSubscribe(PokerTrackerNames.HandHistoryUpdatesTopic, Group = "winrate")]
     public async Task HandleAsync(HandHistoryParsed message, CancellationToken cancellationToken)
     {
         var grain = _grainFactory.GetGrain<IWinrateProcessingGrain>(message.HandId);

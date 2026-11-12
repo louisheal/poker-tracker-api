@@ -3,18 +3,9 @@ using PokerTrackerApi.Domain.HandHistories.Events;
 
 namespace PokerTrackerApi.Winrate;
 
-public record WinrateDto(
-    decimal NetWonBB,
-    decimal WonWithShowdownBB,
-    decimal WonWithoutShowdownBB,
-    decimal NetWonBeforeRakeBB,
-    decimal WonWithShowdownBeforeRakeBB,
-    decimal WonWithoutShowdownBeforeRakeBB
-);
-
 public static class WinrateCalculator
 {
-    public static WinrateDto CalulcateWinrate(HandHistory hand)
+    public static Winrate CalulcateWinrate(HandHistory hand)
     {
         var state = new WinrateState();
         foreach (var evnt in hand.Events)
@@ -219,12 +210,12 @@ public class WinrateState
         heroStreetBet = 0m;
     }
 
-    public WinrateDto GetWinrate()
+    public Winrate GetWinrate()
     {
         var netWon = wonBB - investedBB;
         var netWonBeforeRake = wonBB > 0 ? potBB : 0;
 
-        return new WinrateDto(
+        return new Winrate(
             netWon,
             wentToShowdown ? netWon : 0,
             wentToShowdown ? 0 : netWon,

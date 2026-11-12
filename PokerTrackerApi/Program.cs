@@ -6,6 +6,7 @@ using PokerTrackerApi.HandFileSplitting;
 using PokerTrackerApi.HandFileStorage;
 using PokerTrackerApi.HandImporting;
 using PokerTrackerApi.HandParsing;
+using PokerTrackerApi.Winrate;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,7 @@ builder.Services.AddGarage(builder.Configuration);
 builder.Services.AddHandImporting(builder.Configuration);
 builder.Services.AddHandFileSplitting();
 builder.Services.AddHandParsing();
+builder.Services.AddWinrate();
 
 ServiceConfiguration.AddCapMessaging(builder.Services, builder.Configuration);
 
