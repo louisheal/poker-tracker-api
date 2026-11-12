@@ -23,6 +23,7 @@ public partial class GgPokerHandFileSplitter : IHandFileSplitter
 
         StringBuilder? rawText = null;
         string? handId = null;
+        int sequence = 0;
 
         await foreach (var line in ReadLinesAsync(reader, cancellationToken))
         {
@@ -32,7 +33,7 @@ public partial class GgPokerHandFileSplitter : IHandFileSplitter
                 if (rawText != null)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    yield return new RawHand(handId!, rawText.ToString());
+                    yield return new RawHand(handId!, rawText.ToString(), sequence++);
                 }
 
                 handId = handHeader.Groups["id"].Value;
@@ -52,7 +53,7 @@ public partial class GgPokerHandFileSplitter : IHandFileSplitter
         if (rawText != null)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            yield return new RawHand(handId!, rawText.ToString());
+            yield return new RawHand(handId!, rawText.ToString(), sequence++);
         }
     }
 
