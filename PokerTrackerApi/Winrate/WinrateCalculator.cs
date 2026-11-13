@@ -7,7 +7,7 @@ public static class WinrateCalculator
 {
     public static Winrate CalulcateWinrate(HandHistory hand)
     {
-        var state = new WinrateState();
+        var state = new WinrateState(hand.RakeBB, hand.TotalPotBB);
         foreach (var evnt in hand.Events)
         {
             state.Apply(evnt, hand.HeroPlayerId);
@@ -17,9 +17,8 @@ public static class WinrateCalculator
     }
 }
 
-public class WinrateState
+public class WinrateState(decimal rake, decimal totalPot)
 {
-    private decimal potBB = 0m;
     private decimal investedBB = 0m;
     private decimal wonBB = 0m;
     private decimal heroStreetBet = 0m;
@@ -91,7 +90,6 @@ public class WinrateState
             investedBB += evnt.AmountBB;
         }
 
-        potBB += evnt.AmountBB;
     }
 
     public void Apply(BigBlindPostEvent evnt, string heroPlayerId)
@@ -102,13 +100,9 @@ public class WinrateState
             heroStreetBet += evnt.AmountBB;
         }
 
-        potBB += evnt.AmountBB;
     }
 
-    public void Apply(CashDropEvent evnt, string heroPlayerId)
-    {
-        potBB += evnt.AmountBB;
-    }
+    public void Apply(CashDropEvent evnt, string heroPlayerId) { }
 
     public void Apply(CardsShownEvent evnt, string heroPlayerId)
     {
@@ -131,7 +125,6 @@ public class WinrateState
             heroStreetBet += evnt.BetAmountBB;
         }
 
-        potBB += evnt.BetAmountBB;
     }
 
     public void Apply(PlayerCallEvent evnt, string heroPlayerId)
@@ -142,7 +135,6 @@ public class WinrateState
             heroStreetBet += evnt.CallAmountBB;
         }
 
-        potBB += evnt.CallAmountBB;
     }
 
     public void Apply(PlayerCheckEvent evnt, string heroPlayerId) { }
@@ -164,7 +156,6 @@ public class WinrateState
             heroStreetBet += raiseContribution;
         }
 
-        potBB += evnt.RaiseAmountBB;
     }
 
     public void Apply(PotAwardedEvent evnt, string heroPlayerId)
@@ -188,7 +179,6 @@ public class WinrateState
             heroStreetBet += evnt.AmountBB;
         }
 
-        potBB += evnt.AmountBB;
     }
 
     public void Apply(TurnDealtEvent evnt, string heroPlayerId)
@@ -203,6 +193,7 @@ public class WinrateState
             investedBB -= evnt.AmountBB;
             heroStreetBet -= evnt.AmountBB;
         }
+
     }
 
     private void ApplyBoardDealtEvent(BoardDealtEvent evnt, string heroPlayerId)
@@ -213,14 +204,14 @@ public class WinrateState
     public Winrate GetWinrate()
     {
         var netWon = wonBB - investedBB;
-        var netWonBeforeRake = wonBB > 0 ? potBB : 0;
+        var netWonBeforeRake = netWon > 0 ? netWon + rake : netWon;
 
         return new Winrate(
             netWon,
             wentToShowdown ? netWon : 0,
             wentToShowdown ? 0 : netWon,
             netWonBeforeRake,
-            wentToShowdown ? netWonBeforeRake : 0,
+            wentToShowdown ? netWonBeforeRake  : 0,
             wentToShowdown ? 0 : netWonBeforeRake
         );
     }

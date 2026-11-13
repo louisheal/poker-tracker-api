@@ -1,3 +1,5 @@
+using PokerTrackerApi.HandParsing.Repository;
+
 namespace PokerTrackerApi.HandParsing;
 
 public static class HandHistoryParsingConfiguration
@@ -6,6 +8,7 @@ public static class HandHistoryParsingConfiguration
     {
         public IServiceCollection AddHandParsing()
         {
+            services.AddSingleton<IHandHistoryRepository, MySqlHandHistoryRepository>();
             services.AddSingleton<IHandHistoryParser, GgPokerHandHistoryParser>();
             services.AddTransient<RawHandUpdateReceiver>();
 

@@ -62,8 +62,10 @@ public partial class GgPokerHandHistoryParser : IHandHistoryParser
     [GeneratedRegex(@"\[(?<cards>[^\]]+)\]")]
     private static partial Regex BracketedCardsRegex();
 
-    [GeneratedRegex(@"(?:Rake|Jackpot|Bingo|Fortune|Tax) \$(?<amount>[0-9,]+(?:\.[0-9]+)?)")]
-    private static partial Regex CashDropAmountRegex();
+    [GeneratedRegex(
+        @"^Total pot \$(?<totalPot>[0-9,]+(?:\.[0-9]+)?) \| Rake \$(?<rake>[0-9,]+(?:\.[0-9]+)?)(?: \|.*)?$"
+    )]
+    private static partial Regex HandSummaryRegex();
 
     [GeneratedRegex(@"^posts (?:the )?ante \$(?<amount>[0-9,]+(?:\.[0-9]+)?)(?: .*)?$")]
     private static partial Regex AntePostRegex();
@@ -186,6 +188,8 @@ public partial class GgPokerHandHistoryParser : IHandHistoryParser
             holeCardsMatch.Groups["second"].Value
         );
         var events = new List<HandHistoryEvent>();
+        decimal? totalPotBB = null;
+        decimal? rakeBB = null;
 
         foreach (var line in lines)
         {
@@ -290,22 +294,28 @@ public partial class GgPokerHandHistoryParser : IHandHistoryParser
 
             if (line.StartsWith("Total pot ", StringComparison.Ordinal))
             {
-                var cashDrop = CashDropAmountRegex()
-                    .Matches(line)
-                    .Select(match => match.Groups["amount"].Value)
-                    .Select(amount => TryParseCashAmount(amount, out var parsed) ? parsed : -1m)
-                    .ToArray();
-                if (cashDrop.Any(amount => amount < 0))
+                var handSummary = HandSummaryRegex().Match(line);
+                if (
+                    !handSummary.Success
+                    || !TryParseBigBlindAmount(
+                        handSummary.Groups["totalPot"].Value,
+                        bigBlind,
+                        out var parsedTotalPotBB
+                    )
+                    || !TryParseBigBlindAmount(
+                        handSummary.Groups["rake"].Value,
+                        bigBlind,
+                        out var parsedRakeBB
+                    )
+                    || parsedRakeBB > parsedTotalPotBB
+                    || totalPotBB.HasValue
+                )
                 {
-                    throw new FormatException("A cash-drop amount is invalid.");
+                    throw new FormatException("The hand summary pot or rake amount is invalid.");
                 }
 
-                var totalCashDrop = cashDrop.Sum();
-                if (totalCashDrop > 0)
-                {
-                    events.Add(new CashDropEvent(events.Count, totalCashDrop / bigBlind));
-                }
-
+                totalPotBB = parsedTotalPotBB;
+                rakeBB = parsedRakeBB;
                 continue;
             }
 
@@ -361,13 +371,20 @@ public partial class GgPokerHandHistoryParser : IHandHistoryParser
             );
         }
 
+        if (!totalPotBB.HasValue || !rakeBB.HasValue)
+        {
+            throw new FormatException("The hand summary does not contain total pot and rake.");
+        }
+
         return new HandHistory(
             handHeader.Groups["id"].Value,
             "Hero",
             holeCards,
             players.Values.ToList(),
             events,
-            timestamp
+            timestamp,
+            totalPotBB.Value,
+            rakeBB.Value
         );
     }
 

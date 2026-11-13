@@ -1,4 +1,4 @@
-namespace PokerTrackerApi.Winrate;
+namespace PokerTrackerApi.Winrate.Repository;
 
 public class WinrateDao
 {

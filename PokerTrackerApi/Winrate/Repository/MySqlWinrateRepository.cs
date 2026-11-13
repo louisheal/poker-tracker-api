@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Dapper;
 using PokerTrackerApi.Database;
 
@@ -12,9 +13,40 @@ public class MySqlWinrateRepository : IWinrateRepository
         _connectionFactory = connectionFactory;
     }
 
-    public IAsyncEnumerable<Winrate> GetWinrates(CancellationToken cancellationToken)
+    public async IAsyncEnumerable<Winrate> GetWinrates(
+        [EnumeratorCancellation] CancellationToken cancellationToken
+    )
     {
-        throw new NotImplementedException();
+        const string query = """
+                SELECT
+                    NetWonBB,
+                    WonWithShowdownBB,
+                    WonWithoutShowdownBB,
+                    NetWonBeforeRakeBB,
+                    WonWithShowdownBeforeRakeBB,
+                    WonWithoutShowdownBeforeRakeBB
+                FROM Winrate
+                ORDER BY HandId;
+            """;
+
+        await using var connection = await _connectionFactory.OpenConnectionAsync(
+            cancellationToken
+        );
+        await foreach (
+            var dao in connection
+                .QueryUnbufferedAsync<WinrateDao>(query)
+                .WithCancellation(cancellationToken)
+        )
+        {
+            yield return new Winrate(
+                dao.NetWonBB,
+                dao.WonWithShowdownBB,
+                dao.WonWithoutShowdownBB,
+                dao.NetWonBeforeRakeBB,
+                dao.WonWithShowdownBeforeRakeBB,
+                dao.WonWithoutShowdownBeforeRakeBB
+            );
+        }
     }
 
     public async Task SaveWinrate(

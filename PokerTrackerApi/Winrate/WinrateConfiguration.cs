@@ -9,6 +9,7 @@ public static class WinrateConfiguration
         public IServiceCollection AddWinrate()
         {
             services.AddSingleton<IWinrateRepository, MySqlWinrateRepository>();
+            services.AddTransient<IWinrateService, WinrateService>();
             services.AddTransient<HandHistoryUpdateReceiver>();
 
             return services;

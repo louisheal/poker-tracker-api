@@ -1,6 +1,7 @@
 using DotNetCore.CAP;
 using PokerTrackerApi.Domain.HandHistories;
 using PokerTrackerApi.Domain.Messages;
+using PokerTrackerApi.HandParsing.Repository;
 
 namespace PokerTrackerApi.HandParsing;
 
@@ -11,6 +12,7 @@ public interface IHandParsingGrain : IGrainWithStringKey
 
 public class HandParsingGrain(
     IHandHistoryParser handHistoryParser,
+    IHandHistoryRepository repository,
     ICapPublisher capPublisher
 ) : Grain, IHandParsingGrain
 {
@@ -27,6 +29,8 @@ public class HandParsingGrain(
             // TODO : log
             return;
         }
+
+        await repository.SaveHandHistory(handHistory, cancellationToken);
 
         await capPublisher.PublishAsync(
             PokerTrackerNames.HandHistoryUpdatesTopic,
